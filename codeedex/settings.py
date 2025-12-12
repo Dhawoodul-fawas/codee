@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'attendance',
     'project',
     'apk',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -168,6 +169,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 AUTHENTICATION_BACKENDS = [
     'codeedex.auth_backends.EmployeeAuthBackend',
 ]
+
+JWT_SECRET = "mysecret123"
+JWT_ALGORITHM = "HS256"
+
 
 
 

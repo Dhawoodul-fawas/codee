@@ -113,23 +113,71 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
 # STAFF ONLY LIST
 class EmployeeOnlyListView(generics.ListAPIView):
-    queryset = Employee.objects.filter(role="staff").order_by('-created_at')
     serializer_class = EmployeeAllListSerializer
 
+    def get_queryset(self):
+        return Employee.objects.filter(role="staff").order_by('-created_at')
 
-# INTERN ONLY LIST
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True, context={"request": request})
+
+        return api_response(
+            success=True,
+            message="Staff employees fetched successfully",
+            data=serializer.data
+        )
+
+
+# ✅ INTERN ONLY FULL LIST
 class InternOnlyListView(generics.ListAPIView):
-    queryset = Employee.objects.filter(role="intern").order_by('-created_at')
     serializer_class = EmployeeAllListSerializer
 
+    def get_queryset(self):
+        return Employee.objects.filter(role="intern").order_by('-created_at')
 
-# STAFF BASIC LIST
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True, context={"request": request})
+
+        return api_response(
+            success=True,
+            message="Intern employees fetched successfully",
+            data=serializer.data
+        )
+
+
+# ✅ STAFF BASIC LIST
 class StaffListView(generics.ListAPIView):
-    queryset = Employee.objects.filter(role="staff").order_by('-created_at')
     serializer_class = EmployeeBasicListSerializer
 
+    def get_queryset(self):
+        return Employee.objects.filter(role="staff").order_by('-created_at')
 
-# INTERN BASIC LIST
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True)
+
+        return api_response(
+            success=True,
+            message="Staff basic list fetched successfully",
+            data=serializer.data
+        )
+
+
+# ✅ INTERN BASIC LIST
 class InternListView(generics.ListAPIView):
-    queryset = Employee.objects.filter(role="intern").order_by('-created_at')
     serializer_class = EmployeeBasicListSerializer
+
+    def get_queryset(self):
+        return Employee.objects.filter(role="intern").order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True)
+
+        return api_response(
+            success=True,
+            message="Intern basic list fetched successfully",
+            data=serializer.data
+        )

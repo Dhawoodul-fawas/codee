@@ -24,5 +24,6 @@ urlpatterns = [
     path('attendance/', include('attendance.urls')),
     path('project/', include('project.urls')),
     path('apk/', include('apk.urls')),
+    path("dashboard/", include("dashboard.urls")),
 
 ]
