@@ -21,14 +21,14 @@ project_detail = ProjectViewSet.as_view({
 })
 
 urlpatterns = [
-    # Create & List & Detail (same style as employee URLs)
-    path('project/', project_create, name='project_create'),
-    path('project-list/', project_list, name='project_list'),
-    path('project/<int:pk>/', project_detail, name='project_detail'),
+    # Create & List
+    path('projects/create/', project_create, name='project-create'),
+    path('projects-list/', project_list, name='project-list'),
 
-    # Filter by status
-    path('projects/status/<str:status>/', ProjectStatusFilterView.as_view(), name='project_status_filter'),
+    # Detail / Update / Delete
+    path('projects/edit/<int:pk>/', project_detail, name='project-detail'),
 
-    # Filter by type
-    path('projects/type/<str:ptype>/', ProjectTypeFilterView.as_view(), name='project_type_filter'),
+    # Filters
+    path('projects/filter/status/<str:status>/', ProjectStatusFilterView.as_view(), name='project-filter-status'),
+    path('projects/filter/type/<str:ptype>/', ProjectTypeFilterView.as_view(), name='project-filter-type'),
 ]

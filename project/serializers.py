@@ -4,7 +4,7 @@ from employees.models import Employee
 
 
 # ----------------------------
-# Basic Employee info for list
+# Basic Employee info
 # ----------------------------
 class EmployeeBasicSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
@@ -21,16 +21,23 @@ class EmployeeBasicSerializer(serializers.ModelSerializer):
 
 
 # ----------------------------
-# Project Serializer
+# Project Serializer (FIXED)
 # ----------------------------
 class ProjectSerializer(serializers.ModelSerializer):
+
     project_logo_url = serializers.SerializerMethodField()
 
-    # Show employee details (read-only)
-    project_team = EmployeeBasicSerializer(many=True, read_only=True)
+    # 🔹 READ: manager name
+    project_manager_name = serializers.CharField(
+        source="project_manager.name",
+        read_only=True
+    )
 
-    # Accept employee IDs for create/update
-    project_team_ids = serializers.PrimaryKeyRelatedField(
+    # 🔹 READ: team members
+    team_members = EmployeeBasicSerializer(many=True, read_only=True)
+
+    # 🔹 WRITE: team member IDs
+    team_member_ids = serializers.PrimaryKeyRelatedField(
         queryset=Employee.objects.all(),
         many=True,
         write_only=True,
@@ -41,51 +48,53 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             'id',
+            'project_id',
+            'project_name',
+            'client_name',
+            'description',
+            'start_date',
+            'end_date',
+            'status',
+            'priority',
+            'project_type',
+
+            # Manager
+            'project_manager',        # accepts ID on create/update
+            'project_manager_name',   # shows name in response
+
+            # Team
+            'team_members',
+            'team_member_ids',
 
             # Logo
             'project_logo',
             'project_logo_url',
 
-            # Name
-            'project_name',
-
-            # Team
-            'project_team',
-            'project_team_ids',
-
-            # Status + type
-            'project_status',
-            'due_date',
-            'project_type',
-
-            # Auto time
             'created_at',
         ]
 
-    # Generate full logo URL
     def get_project_logo_url(self, obj):
         request = self.context.get("request")
         if obj.project_logo and request:
             return request.build_absolute_uri(obj.project_logo.url)
         return None
 
-    # CREATE handler
+    # CREATE
     def create(self, validated_data):
-        team_ids = validated_data.pop('project_team_ids', [])
+        team_ids = validated_data.pop('team_member_ids', [])
         project = Project.objects.create(**validated_data)
-        project.project_team.set(team_ids)
+        project.team_members.set(team_ids)
         return project
 
-    # UPDATE handler
+    # UPDATE
     def update(self, instance, validated_data):
-        team_ids = validated_data.pop('project_team_ids', None)
+        team_ids = validated_data.pop('team_member_ids', None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
         instance.save()
 
         if team_ids is not None:
-            instance.project_team.set(team_ids)
+            instance.team_members.set(team_ids)
 
         return instance
