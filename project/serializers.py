@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DesignPlanning, Project, ProjectBudget, ProjectPlanning
+from .models import DeploymentPlanning, DesignPlanning, DevelopmentPlanning, Project, ProjectBudget, ProjectPlanning, TestingPlanning
 from employees.models import Employee
 
 
@@ -291,3 +291,168 @@ class DesignPlanningSerializer(serializers.ModelSerializer):
             instance.project_teams.set(team_ids)
 
         return instance
+
+
+
+class DevelopmentPlanningSerializer(serializers.ModelSerializer):
+
+    project_id = serializers.PrimaryKeyRelatedField(
+        source='project',
+        queryset=Project.objects.all(),
+        write_only=True
+    )
+
+    project_code = serializers.CharField(
+        source='project.project_id',
+        read_only=True
+    )
+
+    project_teams = EmployeeBasicSerializer(many=True, read_only=True)
+
+    project_team_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(),
+        many=True,
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = DevelopmentPlanning
+        fields = [
+            'id',
+            'project_code',
+            'project_id',
+            'start_date',
+            'end_date',
+            'status',
+            'project_teams',
+            'project_team_ids',
+            'created_at'
+        ]
+
+    def create(self, validated_data):
+        team_ids = validated_data.pop('project_team_ids', [])
+        planning = DevelopmentPlanning.objects.create(**validated_data)
+        planning.project_teams.set(team_ids)
+        return planning
+
+    def update(self, instance, validated_data):
+        team_ids = validated_data.pop('project_team_ids', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if team_ids is not None:
+            instance.project_teams.set(team_ids)
+
+        return instance
+
+class TestingPlanningSerializer(serializers.ModelSerializer):
+
+    project_id = serializers.PrimaryKeyRelatedField(
+        source='project',
+        queryset=Project.objects.all(),
+        write_only=True
+    )
+
+    project_code = serializers.CharField(
+        source='project.project_id',
+        read_only=True
+    )
+
+    project_teams = EmployeeBasicSerializer(many=True, read_only=True)
+
+    project_team_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(),
+        many=True,
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = TestingPlanning
+        fields = [
+            'id',
+            'project_code',
+            'project_id',
+            'start_date',
+            'end_date',
+            'status',
+            'project_teams',
+            'project_team_ids',
+            'created_at'
+        ]
+
+    def create(self, validated_data):
+        team_ids = validated_data.pop('project_team_ids', [])
+        planning = TestingPlanning.objects.create(**validated_data)
+        planning.project_teams.set(team_ids)
+        return planning
+
+    def update(self, instance, validated_data):
+        team_ids = validated_data.pop('project_team_ids', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if team_ids is not None:
+            instance.project_teams.set(team_ids)
+
+        return instance
+
+class DeploymentPlanningSerializer(serializers.ModelSerializer):
+
+    project_id = serializers.PrimaryKeyRelatedField(
+        source='project',
+        queryset=Project.objects.all(),
+        write_only=True
+    )
+
+    project_code = serializers.CharField(
+        source='project.project_id',
+        read_only=True
+    )
+
+    project_teams = EmployeeBasicSerializer(many=True, read_only=True)
+
+    project_team_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(),
+        many=True,
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = DeploymentPlanning
+        fields = [
+            'id',
+            'project_code',
+            'project_id',
+            'start_date',
+            'end_date',
+            'status',
+            'project_teams',
+            'project_team_ids',
+            'created_at'
+        ]
+
+    def create(self, validated_data):
+        team_ids = validated_data.pop('project_team_ids', [])
+        planning = DeploymentPlanning.objects.create(**validated_data)
+        planning.project_teams.set(team_ids)
+        return planning
+
+    def update(self, instance, validated_data):
+        team_ids = validated_data.pop('project_team_ids', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if team_ids is not None:
+            instance.project_teams.set(team_ids)
+
+        return instance
+

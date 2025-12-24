@@ -2,8 +2,8 @@ from rest_framework import viewsets, generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import DesignPlanning, Project, ProjectBudget, ProjectPlanning
-from .serializers import   DesignPlanningSerializer, ProjectBasicListSerializer, ProjectBudgetSerializer, ProjectPlanningSerializer,ProjectSerializer
+from .models import DeploymentPlanning, DesignPlanning, DevelopmentPlanning, Project, ProjectBudget, ProjectPlanning, TestingPlanning
+from .serializers import   DeploymentPlanningSerializer, DesignPlanningSerializer, DevelopmentPlanningSerializer, ProjectBasicListSerializer, ProjectBudgetSerializer, ProjectPlanningSerializer,ProjectSerializer, TestingPlanningSerializer
 from .utils import api_response
 
 
@@ -289,18 +289,118 @@ class ProjectPlanningDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             data=None
         )
 
-class DesignPlanningCreateAPIView(generics.CreateAPIView):
-    queryset = DesignPlanning.objects.all()
-    serializer_class = DesignPlanningSerializer
+# class DesignPlanningCreateAPIView(generics.CreateAPIView):
+#     queryset = DesignPlanning.objects.all()
+#     serializer_class = DesignPlanningSerializer
+#     permission_classes = [AllowAny]
+
+#     def create(self, request, *args, **kwargs):
+#         project_id = request.data.get("project_id")
+
+#         if DesignPlanning.objects.filter(project_id=project_id).exists():
+#             return api_response(
+#                 success=False,
+#                 message="Design planning already exists for this project",
+#                 data=None,
+#                 status_code=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         serializer = self.get_serializer(
+#             data=request.data,
+#             context={"request": request}
+#         )
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save()
+
+#         return api_response(
+#             success=True,
+#             message="Design planning created successfully",
+#             data=serializer.data,
+#             status_code=status.HTTP_201_CREATED
+#         )
+
+
+# # LIST
+# class DesignPlanningListAPIView(generics.ListAPIView):
+#     queryset = DesignPlanning.objects.all().order_by('-created_at')
+#     serializer_class = DesignPlanningSerializer
+#     permission_classes = [AllowAny]
+
+#     def list(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(
+#             self.get_queryset(),
+#             many=True,
+#             context={"request": request}
+#         )
+
+#         return api_response(
+#             success=True,
+#             message="Design planning list fetched successfully",
+#             data=serializer.data
+#         )
+
+
+# # DETAIL / UPDATE / DELETE
+# class DesignPlanningDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = DesignPlanning.objects.all()
+#     serializer_class = DesignPlanningSerializer
+#     permission_classes = [AllowAny]
+
+#     def retrieve(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(
+#             self.get_object(),
+#             context={"request": request}
+#         )
+
+#         return api_response(
+#             success=True,
+#             message="Design planning details fetched",
+#             data=serializer.data
+#         )
+
+#     def update(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(
+#             self.get_object(),
+#             data=request.data,
+#             partial=True,
+#             context={"request": request}
+#         )
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save()
+
+#         return api_response(
+#             success=True,
+#             message="Design planning updated successfully",
+#             data=serializer.data
+#         )
+
+#     def destroy(self, request, *args, **kwargs):
+#         self.get_object().delete()
+
+#         return api_response(
+#             success=True,
+#             message="Design planning deleted successfully",
+#             data=None
+#         )    
+
+
+
+
+class BasePlanningAPIView:
+    """
+    Reusable base class for Create, List, Detail, Update, Delete
+    """
+
     permission_classes = [AllowAny]
 
+    # -------- CREATE --------
     def create(self, request, *args, **kwargs):
         project_id = request.data.get("project_id")
 
-        if DesignPlanning.objects.filter(project_id=project_id).exists():
+        if self.queryset.filter(project_id=project_id).exists():
             return api_response(
                 success=False,
-                message="Design planning already exists for this project",
+                message=f"{self.planning_name} already exists for this project",
                 data=None,
                 status_code=status.HTTP_400_BAD_REQUEST
             )
@@ -314,18 +414,12 @@ class DesignPlanningCreateAPIView(generics.CreateAPIView):
 
         return api_response(
             success=True,
-            message="Design planning created successfully",
+            message=f"{self.planning_name} created successfully",
             data=serializer.data,
             status_code=status.HTTP_201_CREATED
         )
 
-
-# LIST
-class DesignPlanningListAPIView(generics.ListAPIView):
-    queryset = DesignPlanning.objects.all().order_by('-created_at')
-    serializer_class = DesignPlanningSerializer
-    permission_classes = [AllowAny]
-
+    # -------- LIST --------
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(
             self.get_queryset(),
@@ -335,17 +429,11 @@ class DesignPlanningListAPIView(generics.ListAPIView):
 
         return api_response(
             success=True,
-            message="Design planning list fetched successfully",
+            message=f"{self.planning_name} list fetched successfully",
             data=serializer.data
         )
 
-
-# DETAIL / UPDATE / DELETE
-class DesignPlanningDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = DesignPlanning.objects.all()
-    serializer_class = DesignPlanningSerializer
-    permission_classes = [AllowAny]
-
+    # -------- RETRIEVE --------
     def retrieve(self, request, *args, **kwargs):
         serializer = self.get_serializer(
             self.get_object(),
@@ -354,10 +442,11 @@ class DesignPlanningDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
         return api_response(
             success=True,
-            message="Design planning details fetched",
+            message=f"{self.planning_name} details fetched",
             data=serializer.data
         )
 
+    # -------- UPDATE --------
     def update(self, request, *args, **kwargs):
         serializer = self.get_serializer(
             self.get_object(),
@@ -370,15 +459,100 @@ class DesignPlanningDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
         return api_response(
             success=True,
-            message="Design planning updated successfully",
+            message=f"{self.planning_name} updated successfully",
             data=serializer.data
         )
 
+    # -------- DELETE --------
     def destroy(self, request, *args, **kwargs):
         self.get_object().delete()
 
         return api_response(
             success=True,
-            message="Design planning deleted successfully",
+            message=f"{self.planning_name} deleted successfully",
             data=None
-        )    
+        )
+    
+class DesignPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
+    queryset = DesignPlanning.objects.all()
+    serializer_class = DesignPlanningSerializer
+    planning_name = "Design planning"
+
+
+class DesignPlanningListAPIView(BasePlanningAPIView, generics.ListAPIView):
+    queryset = DesignPlanning.objects.all().order_by("-created_at")
+    serializer_class = DesignPlanningSerializer
+    planning_name = "Design planning"
+
+
+class DesignPlanningDetailAPIView(
+    BasePlanningAPIView,
+    generics.RetrieveUpdateDestroyAPIView
+):
+    queryset = DesignPlanning.objects.all()
+    serializer_class = DesignPlanningSerializer
+    planning_name = "Design planning"
+
+
+class DevelopmentPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
+    queryset = DevelopmentPlanning.objects.all()
+    serializer_class = DevelopmentPlanningSerializer
+    planning_name = "Development planning"
+
+
+class DevelopmentPlanningListAPIView(BasePlanningAPIView, generics.ListAPIView):
+    queryset = DevelopmentPlanning.objects.all().order_by("-created_at")
+    serializer_class = DevelopmentPlanningSerializer
+    planning_name = "Development planning"
+
+
+class DevelopmentPlanningDetailAPIView(
+    BasePlanningAPIView,
+    generics.RetrieveUpdateDestroyAPIView
+):
+    queryset = DevelopmentPlanning.objects.all()
+    serializer_class = DevelopmentPlanningSerializer
+    planning_name = "Development planning"
+
+
+class TestingPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
+    queryset = TestingPlanning.objects.all()
+    serializer_class = TestingPlanningSerializer
+    planning_name = "Testing planning"
+
+
+class TestingPlanningListAPIView(BasePlanningAPIView, generics.ListAPIView):
+    queryset = TestingPlanning.objects.all().order_by("-created_at")
+    serializer_class = TestingPlanningSerializer
+    planning_name = "Testing planning"
+
+
+class TestingPlanningDetailAPIView(
+    BasePlanningAPIView,
+    generics.RetrieveUpdateDestroyAPIView
+):
+    queryset = TestingPlanning.objects.all()
+    serializer_class = TestingPlanningSerializer
+    planning_name = "Testing planning"
+
+
+class DeploymentPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
+    queryset = DeploymentPlanning.objects.all()
+    serializer_class = DeploymentPlanningSerializer
+    planning_name = "Deployment planning"
+
+
+class DeploymentPlanningListAPIView(BasePlanningAPIView, generics.ListAPIView):
+    queryset = DeploymentPlanning.objects.all().order_by("-created_at")
+    serializer_class = DeploymentPlanningSerializer
+    planning_name = "Deployment planning"
+
+
+class DeploymentPlanningDetailAPIView(
+    BasePlanningAPIView,
+    generics.RetrieveUpdateDestroyAPIView
+):
+    queryset = DeploymentPlanning.objects.all()
+    serializer_class = DeploymentPlanningSerializer
+    planning_name = "Deployment planning"
+

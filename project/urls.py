@@ -10,6 +10,25 @@ from .views import (
     ProjectStatusFilterView,
     ProjectTypeFilterView,
     ProjectBudgetViewSet,
+    # Design
+    DesignPlanningCreateAPIView,
+    DesignPlanningListAPIView,
+    DesignPlanningDetailAPIView,
+
+    # Development
+    DevelopmentPlanningCreateAPIView,
+    DevelopmentPlanningListAPIView,
+    DevelopmentPlanningDetailAPIView,
+
+    # Testing
+    TestingPlanningCreateAPIView,
+    TestingPlanningListAPIView,
+    TestingPlanningDetailAPIView,
+
+    # Deployment
+    DeploymentPlanningCreateAPIView,
+    DeploymentPlanningListAPIView,
+    DeploymentPlanningDetailAPIView,
 )
 
 # -----------------------------
@@ -84,6 +103,20 @@ urlpatterns = [
     path('design-planning/create/', design_planning_create, name='design-planning-create'),
     path('design-planning/list/', design_planning_list, name='design-planning-list'),
     path('design-planning/edit/<int:pk>/', design_planning_detail, name='design-planning-detail'),
+
+    path("development-planning/create/", DevelopmentPlanningCreateAPIView.as_view()),
+    path("development-planning/list/", DevelopmentPlanningListAPIView.as_view()),
+    path("development-planning/edit/<int:pk>/", DevelopmentPlanningDetailAPIView.as_view()),
+
+    # Testing
+    path("testing-planning/create/", TestingPlanningCreateAPIView.as_view()),
+    path("testing-planning/list/", TestingPlanningListAPIView.as_view()),
+    path("testing-planning/edit/<int:pk>/", TestingPlanningDetailAPIView.as_view()),
+
+    # Deployment
+    path("deployment-planning/create/", DeploymentPlanningCreateAPIView.as_view()),
+    path("deployment-planning/list/", DeploymentPlanningListAPIView.as_view()),
+    path("deployment-planning/edit/<int:pk>/", DeploymentPlanningDetailAPIView.as_view()),
 
 
 ]
