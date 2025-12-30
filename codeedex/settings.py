@@ -167,8 +167,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 AUTHENTICATION_BACKENDS = [
-    'codeedex.auth_backends.EmployeeAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
+
 
 JWT_SECRET = "mysecret123"
 JWT_ALGORITHM = "HS256"

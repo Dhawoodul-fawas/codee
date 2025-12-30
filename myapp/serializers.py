@@ -9,46 +9,36 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'username'] 
+        fields = ['id', 'email', 'username', 'password']
 
-    # Email must be unique
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email is already registered.")
+            raise serializers.ValidationError("Email already exists.")
         return value
 
     def create(self, validated_data):
-        email = validated_data['email']
-        password = validated_data['password']
-        username = validated_data['username']
-
-       
-
         user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
         )
         return user
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email = data["email"]
-        password = data["password"]
+        email = data.get("email")
+        password = data.get("password")
 
-        # check email exists
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
+        user = User.objects.filter(email=email).first()
+
+        if user is None:
             raise serializers.ValidationError("Invalid email or password.")
 
-        # authenticate using username
-        user = authenticate(username=user.username, password=password)
-
-        if not user:
+        if not user.check_password(password):
             raise serializers.ValidationError("Invalid email or password.")
 
         refresh = RefreshToken.for_user(user)
@@ -56,7 +46,13 @@ class LoginSerializer(serializers.Serializer):
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            }
         }
+
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
