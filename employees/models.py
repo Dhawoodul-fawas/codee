@@ -2,6 +2,7 @@ import re
 from django.db import models
 from django.contrib.auth.hashers import make_password
 
+
 class Employee(models.Model):
 
     DEPARTMENT_CHOICES = [
@@ -42,20 +43,31 @@ class Employee(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
     employee_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
     password = models.CharField(max_length=255, null=True, blank=True)
+
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15)
+
     department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, blank=True, null=True)
+
     address = models.TextField()
     joining_date = models.DateField()
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, null=True, blank=True)
+
     profile_image = models.ImageField(upload_to="employee_profiles/", null=True, blank=True)
+
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+
     id_proof_type = models.CharField(max_length=20, choices=ID_PROOF_CHOICES, null=True, blank=True)
     id_proof_document = models.FileField(upload_to="employee_id_proofs/", null=True, blank=True)
+
+    # ✅ NEW FIELD (staff only)
+    offer_letter = models.FileField(upload_to="employee_offer_letters/", null=True, blank=True)
+
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -69,6 +81,10 @@ class Employee(models.Model):
         if self.role == "intern":
             self.position = None
             self.salary = None
+
+        # ✅ Only staff can have offer letter
+        if self.role != "staff":
+            self.offer_letter = None
 
         # Staff → must have position
         if self.role == "staff" and not self.position:
