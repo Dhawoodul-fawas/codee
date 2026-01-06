@@ -1,14 +1,12 @@
 from django.db import models
 from employees.models import Employee
+from django.utils import timezone
 
 
+# =====================================================
+# Project Model
+# =====================================================
 class Project(models.Model):
-
-    STATUS_CHOICES = [
-        ('not_started', 'Not Started'),
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-    ]
 
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -22,22 +20,30 @@ class Project(models.Model):
         ('webapp', 'Web App'),
     ]
 
-    # ---- Project Overview ----
-    project_id = models.CharField(max_length=20,unique=True,null=True,blank=True)
+    project_id = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True
+    )
+
     project_name = models.CharField(max_length=255)
+    client_name = models.CharField(max_length=100, default="Unknown Client")
+    client_email = models.EmailField(max_length=255,blank=True,null=True)
 
-    client_name = models.CharField(max_length=100,default="Unknown Client")
-    start_date = models.DateField(null=True,blank=True)
-    end_date = models.DateField(null=True,blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
-    status = models.CharField(max_length=20,choices=STATUS_CHOICES,default='not_started')
-    priority = models.CharField(max_length=20,choices=PRIORITY_CHOICES,default='medium')
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='medium'
+    )
 
     project_manager = models.ForeignKey(
         Employee,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True,             # ✅ allow empty
+        blank=True,
         related_name='managed_projects'
     )
 
@@ -56,19 +62,36 @@ class Project(models.Model):
 
     project_logo = models.ImageField(
         upload_to='project_logos/',
-        blank=True,
-        null=True
+        null=True,
+        blank=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.project_id:
+            year = timezone.now().year
+            last_project = Project.objects.filter(
+                project_id__startswith=f"PRJ-{year}"
+            ).order_by('-id').first()
+
+            if last_project:
+                last_number = int(last_project.project_id.split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            self.project_id = f"PRJ-{year}-{new_number:04d}"
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.project_name} ({self.project_id})"
 
 
-
-# -------------------- Budget Model --------------------
-
+# =====================================================
+# Budget Model
+# =====================================================
 class ProjectBudget(models.Model):
 
     project = models.OneToOneField(
@@ -77,22 +100,13 @@ class ProjectBudget(models.Model):
         related_name='budget'
     )
 
-    total_budget = models.DecimalField(
-        max_digits=12,
-        decimal_places=2
-    )
-
-    spent_amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0.00
-    )
-
+    total_budget = models.DecimalField(max_digits=12, decimal_places=2)
+    spent_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     remaining_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         editable=False,
-        default=0.00          # ✅ REQUIRED (migration fix)
+        default=0.00
     )
 
     last_updated = models.DateTimeField(auto_now=True)
@@ -103,175 +117,80 @@ class ProjectBudget(models.Model):
 
     def __str__(self):
         return f"{self.project.project_name} Budget"
-    
 
-class ProjectPlanning(models.Model):
 
-    PLANNING_STATUS = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
-    ]
+# =====================================================
+# Abstract Base Planning Model (NO STATUS)
+# =====================================================
+class BasePlanning(models.Model):
 
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    project_teams = models.ManyToManyField(
+        Employee,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+# =====================================================
+# Planning Phases
+# =====================================================
+class ProjectPlanning(BasePlanning):
     project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
         related_name='planning'
     )
 
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=PLANNING_STATUS,
-        default='not_started'
-    )
-
-    project_teams = models.ManyToManyField(
-        Employee,
-        related_name='planned_projects',
-        blank=True
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.project.project_name} Planning"
-    
-class DesignPlanning(models.Model):
 
-    PLANNING_STATUS = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
-    ]
 
+class DesignPlanning(BasePlanning):
     project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
         related_name='design_planning'
     )
 
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=PLANNING_STATUS,
-        default='not_started'
-    )
-
-    project_teams = models.ManyToManyField(
-        Employee,
-        related_name='design_planned_projects',
-        blank=True
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.project.project_name} Design Planning"
 
 
-class DevelopmentPlanning(models.Model):
-
-    PLANNING_STATUS = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
-    ]
-
+class DevelopmentPlanning(BasePlanning):
     project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
         related_name='development_planning'
     )
 
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=PLANNING_STATUS,
-        default='not_started'
-    )
-
-    project_teams = models.ManyToManyField(
-        Employee,
-        related_name='development_planned_projects',
-        blank=True
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.project.project_name} Development Planning"
 
-class TestingPlanning(models.Model):
 
-    PLANNING_STATUS = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
-    ]
-
+class TestingPlanning(BasePlanning):
     project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
         related_name='testing_planning'
     )
 
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=PLANNING_STATUS,
-        default='not_started'
-    )
-
-    project_teams = models.ManyToManyField(
-        Employee,
-        related_name='testing_planned_projects',
-        blank=True
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.project.project_name} Testing Planning"
 
-class DeploymentPlanning(models.Model):
 
-    PLANNING_STATUS = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
-    ]
-
+class DeploymentPlanning(BasePlanning):
     project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
         related_name='deployment_planning'
     )
-
-    start_date = models.DateField()
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=PLANNING_STATUS,
-        default='not_started'
-    )
-
-    project_teams = models.ManyToManyField(
-        Employee,
-        related_name='deployment_planned_projects',
-        blank=True
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.project.project_name} Deployment Planning"
