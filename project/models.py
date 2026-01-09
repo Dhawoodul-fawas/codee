@@ -4,7 +4,7 @@ from django.utils import timezone
 
 
 # =====================================================
-# Project Model
+# Project Model (WITH BUDGET)
 # =====================================================
 class Project(models.Model):
 
@@ -28,7 +28,12 @@ class Project(models.Model):
 
     project_name = models.CharField(max_length=255)
     client_name = models.CharField(max_length=100, default="Unknown Client")
-    client_email = models.EmailField(max_length=255,blank=True,null=True)
+    client_email = models.EmailField(max_length=255, blank=True, null=True)
+    client_contact = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        help_text="Client phone number")
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -66,9 +71,32 @@ class Project(models.Model):
         blank=True
     )
 
+    # =============================
+    # Budget Fields (Moved Here)
+    # =============================
+    total_budget = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.00
+    )
+
+    spent_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.00
+    )
+
+    remaining_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        editable=False,
+        default=0.00
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        # Auto-generate project_id
         if not self.project_id:
             year = timezone.now().year
             last_project = Project.objects.filter(
@@ -83,6 +111,9 @@ class Project(models.Model):
 
             self.project_id = f"PRJ-{year}-{new_number:04d}"
 
+        # Auto-calculate remaining budget
+        self.remaining_amount = self.total_budget - self.spent_amount
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -90,37 +121,7 @@ class Project(models.Model):
 
 
 # =====================================================
-# Budget Model
-# =====================================================
-class ProjectBudget(models.Model):
-
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='budget'
-    )
-
-    total_budget = models.DecimalField(max_digits=12, decimal_places=2)
-    spent_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    remaining_amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        editable=False,
-        default=0.00
-    )
-
-    last_updated = models.DateTimeField(auto_now=True)
-
-    def save(self, *args, **kwargs):
-        self.remaining_amount = self.total_budget - self.spent_amount
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.project.project_name} Budget"
-
-
-# =====================================================
-# Abstract Base Planning Model (NO STATUS)
+# Abstract Base Planning Model
 # =====================================================
 class BasePlanning(models.Model):
 

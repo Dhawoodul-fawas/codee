@@ -11,7 +11,8 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'name', 'email', 'phone',
+            'id', 'employee_id',
+            'name', 'email', 'phone',
             'department', 'position',
             'address', 'joining_date',
             'date_of_birth', 'gender',
@@ -64,7 +65,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
             'profile_image',
             'id_proof_type',
             'id_proof_document',
-            'offer_letter',          # ✅ added
+            'offer_letter',         
             'status',
             'created_at', 'updated_at',
         ]

@@ -2,22 +2,20 @@ from rest_framework import viewsets, generics, status
 from rest_framework.permissions import AllowAny
 
 from .models import (
-    Project, ProjectBudget,
+    Project,
     ProjectPlanning, DesignPlanning,
     DevelopmentPlanning, TestingPlanning,
     DeploymentPlanning
 )
 
 from .serializers import (
-    ProjectSerializer, ProjectBasicListSerializer,
-    ProjectBudgetSerializer,
+    ProjectListSerializer, ProjectSerializer,
     ProjectPlanningSerializer, DesignPlanningSerializer,
     DevelopmentPlanningSerializer, TestingPlanningSerializer,
     DeploymentPlanningSerializer
 )
 
 from .utils import api_response
-
 
 
 # ---------------------------------------------------------
@@ -28,13 +26,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_serializer_class(self):
-        return ProjectBasicListSerializer if self.action == 'list' else ProjectSerializer
+        return ProjectListSerializer if self.action == 'list' else ProjectSerializer
 
     def get_serializer_context(self):
         return {"request": self.request}
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -49,7 +50,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(
             self.get_object(),
             data=request.data,
-            partial=True
+            partial=True,
+            context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -61,7 +63,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
 
     def retrieve(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_object())
+        serializer = self.get_serializer(
+            self.get_object(),
+            context={"request": request}
+        )
         return api_response(
             success=True,
             message="Project details fetched successfully",
@@ -75,6 +80,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             message="Project deleted successfully",
             data=None
         )
+
+
 
 # ---------------------------------------------------------
 # Filter by Type (web / app / webapp)
@@ -101,63 +108,9 @@ class ProjectTypeFilterView(generics.ListAPIView):
         )
 
 
-
-class ProjectBudgetViewSet(viewsets.ModelViewSet):
-    queryset = ProjectBudget.objects.all()
-    serializer_class = ProjectBudgetSerializer
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        return api_response(
-            success=True,
-            message="Project budget created successfully",
-            data=serializer.data,
-            status_code=status.HTTP_201_CREATED
-        )
-
-    def update(self, request, *args, **kwargs):
-        serializer = self.get_serializer(
-            self.get_object(),
-            data=request.data,
-            partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        return api_response(
-            success=True,
-            message="Project budget updated successfully",
-            data=serializer.data
-        )
-
-    def retrieve(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_object())
-        return api_response(
-            success=True,
-            message="Project budget fetched successfully",
-            data=serializer.data
-        )
-
-    def list(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_queryset(), many=True)
-        return api_response(
-            success=True,
-            message="Project budgets fetched successfully",
-            data=serializer.data
-        )
-
-    def destroy(self, request, *args, **kwargs):
-        self.get_object().delete()
-        return api_response(
-            success=True,
-            message="Project budget deleted successfully",
-            data=None
-        )
-
+# =====================================================
+# Base Planning API Logic
+# =====================================================
 class BasePlanningAPIView:
     permission_classes = [AllowAny]
 
@@ -234,6 +187,9 @@ class BasePlanningAPIView:
         )
 
 
+# =====================================================
+# Planning Phase APIs
+# =====================================================
 class ProjectPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
     queryset = ProjectPlanning.objects.all()
     serializer_class = ProjectPlanningSerializer
@@ -250,7 +206,6 @@ class ProjectPlanningDetailAPIView(BasePlanningAPIView, generics.RetrieveUpdateD
     queryset = ProjectPlanning.objects.all()
     serializer_class = ProjectPlanningSerializer
     planning_name = "Project planning"
-
 
 
 class DesignPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
@@ -270,7 +225,6 @@ class DesignPlanningDetailAPIView(BasePlanningAPIView, generics.RetrieveUpdateDe
     serializer_class = DesignPlanningSerializer
     planning_name = "Design planning"
 
-    
 
 class DevelopmentPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
     queryset = DevelopmentPlanning.objects.all()
@@ -288,7 +242,6 @@ class DevelopmentPlanningDetailAPIView(BasePlanningAPIView, generics.RetrieveUpd
     queryset = DevelopmentPlanning.objects.all()
     serializer_class = DevelopmentPlanningSerializer
     planning_name = "Development planning"
-
 
 
 class TestingPlanningCreateAPIView(BasePlanningAPIView, generics.CreateAPIView):
@@ -325,5 +278,3 @@ class DeploymentPlanningDetailAPIView(BasePlanningAPIView, generics.RetrieveUpda
     queryset = DeploymentPlanning.objects.all()
     serializer_class = DeploymentPlanningSerializer
     planning_name = "Deployment planning"
-
-

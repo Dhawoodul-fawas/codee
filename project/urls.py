@@ -5,9 +5,6 @@ from .views import (
     ProjectViewSet,
     ProjectTypeFilterView,
 
-    # Budget
-    ProjectBudgetViewSet,
-
     # Planning - Project
     ProjectPlanningCreateAPIView,
     ProjectPlanningListAPIView,
@@ -47,19 +44,6 @@ project_detail = ProjectViewSet.as_view({
     "delete": "destroy"
 })
 
-# -----------------------------
-# Project Budget ViewSet mappings
-# -----------------------------
-project_budget_create = ProjectBudgetViewSet.as_view({"post": "create"})
-project_budget_list = ProjectBudgetViewSet.as_view({"get": "list"})
-project_budget_detail = ProjectBudgetViewSet.as_view({
-    "get": "retrieve",
-    "put": "update",
-    "patch": "update",
-    "delete": "destroy"
-})
-
-
 
 urlpatterns = [
 
@@ -74,46 +58,106 @@ urlpatterns = [
     # -----------------------------
     # Project Filters
     # -----------------------------
-    path('projects/filter/type/<str:ptype>/',ProjectTypeFilterView.as_view(),name='project-filter-type'),
-
-    # -----------------------------
-    # Project Budget
-    # -----------------------------
-    path('project-budgets/create/',project_budget_create,name='project-budget-create'),
-    path('project-budgets/list/',project_budget_list,name='project-budget-list'),
-    path('project-budgets/edit/<int:pk>/',project_budget_detail,name='project-budget-detail'),
+    path(
+        'projects/filter/type/<str:ptype>/',
+        ProjectTypeFilterView.as_view(),
+        name='project-filter-type'
+    ),
 
     # -----------------------------
     # Project Planning
     # -----------------------------
-    path('project-planning/create/',ProjectPlanningCreateAPIView.as_view(),name='project-planning-create'),
-    path('project-planning/list/',ProjectPlanningListAPIView.as_view(),name='project-planning-list'),
-    path('project-planning/edit/<int:pk>/',ProjectPlanningDetailAPIView.as_view(),name='project-planning-detail'),
+    path(
+        'project-planning/create/',
+        ProjectPlanningCreateAPIView.as_view(),
+        name='project-planning-create'
+    ),
+    path(
+        'project-planning/list/',
+        ProjectPlanningListAPIView.as_view(),
+        name='project-planning-list'
+    ),
+    path(
+        'project-planning/edit/<int:pk>/',
+        ProjectPlanningDetailAPIView.as_view(),
+        name='project-planning-detail'
+    ),
 
     # -----------------------------
     # Design Planning
     # -----------------------------
-    path('design-planning/create/',DesignPlanningCreateAPIView.as_view(),name='design-planning-create'),
-    path('design-planning/list/',DesignPlanningListAPIView.as_view(),name='design-planning-list'),
-    path('design-planning/edit/<int:pk>/',DesignPlanningDetailAPIView.as_view(),name='design-planning-detail'),
+    path(
+        'design-planning/create/',
+        DesignPlanningCreateAPIView.as_view(),
+        name='design-planning-create'
+    ),
+    path(
+        'design-planning/list/',
+        DesignPlanningListAPIView.as_view(),
+        name='design-planning-list'
+    ),
+    path(
+        'design-planning/edit/<int:pk>/',
+        DesignPlanningDetailAPIView.as_view(),
+        name='design-planning-detail'
+    ),
+
     # -----------------------------
     # Development Planning
     # -----------------------------
-    path('development-planning/create/', DevelopmentPlanningCreateAPIView.as_view(), name='development-planning-create'),
-    path('development-planning/list/', DevelopmentPlanningListAPIView.as_view(), name='development-planning-list'),
-    path('development-planning/edit/<int:pk>/', DevelopmentPlanningDetailAPIView.as_view(), name='development-planning-detail'),
+    path(
+        'development-planning/create/',
+        DevelopmentPlanningCreateAPIView.as_view(),
+        name='development-planning-create'
+    ),
+    path(
+        'development-planning/list/',
+        DevelopmentPlanningListAPIView.as_view(),
+        name='development-planning-list'
+    ),
+    path(
+        'development-planning/edit/<int:pk>/',
+        DevelopmentPlanningDetailAPIView.as_view(),
+        name='development-planning-detail'
+    ),
 
     # -----------------------------
     # Testing Planning
     # -----------------------------
-    path('testing-planning/create/', TestingPlanningCreateAPIView.as_view(), name='testing-planning-create'),
-    path('testing-planning/list/', TestingPlanningListAPIView.as_view(), name='testing-planning-list'),
-    path('testing-planning/edit/<int:pk>/', TestingPlanningDetailAPIView.as_view(), name='testing-planning-detail'),
+    path(
+        'testing-planning/create/',
+        TestingPlanningCreateAPIView.as_view(),
+        name='testing-planning-create'
+    ),
+    path(
+        'testing-planning/list/',
+        TestingPlanningListAPIView.as_view(),
+        name='testing-planning-list'
+    ),
+    path(
+        'testing-planning/edit/<int:pk>/',
+        TestingPlanningDetailAPIView.as_view(),
+        name='testing-planning-detail'
+    ),
 
     # -----------------------------
     # Deployment Planning
     # -----------------------------
-    path('deployment-planning/create/', DeploymentPlanningCreateAPIView.as_view(), name='deployment-planning-create'),
-    path('deployment-planning/list/', DeploymentPlanningListAPIView.as_view(), name='deployment-planning-list'),
-    path('deployment-planning/edit/<int:pk>/', DeploymentPlanningDetailAPIView.as_view(), name='deployment-planning-detail'),
+    path(
+        'deployment-planning/create/',
+        DeploymentPlanningCreateAPIView.as_view(),
+        name='deployment-planning-create'
+    ),
+    path(
+        'deployment-planning/list/',
+        DeploymentPlanningListAPIView.as_view(),
+        name='deployment-planning-list'
+    ),
+    path(
+        'deployment-planning/edit/<int:pk>/',
+        DeploymentPlanningDetailAPIView.as_view(),
+        name='deployment-planning-detail'
+    ),
+
+
 ]

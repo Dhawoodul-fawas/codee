@@ -1,6 +1,7 @@
+from decimal import Decimal
 from rest_framework import serializers
 from .models import (
-    Project, ProjectBudget,
+    Project,
     ProjectPlanning, DesignPlanning,
     DevelopmentPlanning, TestingPlanning,
     DeploymentPlanning
@@ -26,36 +27,6 @@ class EmployeeBasicSerializer(serializers.ModelSerializer):
 
 
 # ----------------------------
-# Project Budget Serializer
-# ----------------------------
-
-class ProjectBudgetSerializer(serializers.ModelSerializer):
-
-    project_id = serializers.PrimaryKeyRelatedField(
-        source='project',
-        queryset=Project.objects.all(),
-        write_only=True
-    )
-
-    project = serializers.IntegerField(
-        source='project.id',
-        read_only=True
-    )
-
-    class Meta:
-        model = ProjectBudget
-        fields = [
-            'project',
-            'project_id',
-            'total_budget',
-            'spent_amount',
-            'remaining_amount',
-            'last_updated',
-        ]
-        read_only_fields = ['remaining_amount', 'last_updated']
-
-
-# ----------------------------
 # Project Serializer
 # ----------------------------
 class ProjectSerializer(serializers.ModelSerializer):
@@ -67,7 +38,6 @@ class ProjectSerializer(serializers.ModelSerializer):
     )
 
     team_members = EmployeeBasicSerializer(many=True, read_only=True)
-
     team_member_ids = serializers.PrimaryKeyRelatedField(
         queryset=Employee.objects.all(),
         many=True,
@@ -75,48 +45,56 @@ class ProjectSerializer(serializers.ModelSerializer):
         required=False
     )
 
-    budget = ProjectBudgetSerializer(read_only=True)
+    spent_amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False
+    )
 
     class Meta:
         model = Project
         fields = [
-            'id',
-            'project_id',
-            'project_name',
-            'client_name',
-            'client_email',
-            'description',
-            'start_date',
-            'end_date',
-            'priority',
-            'project_type',
-            'project_manager',
-            'project_manager_name',
-            'team_members',
-            'team_member_ids',
-            'budget',
-            'project_logo',
-            'project_logo_url',
+            'id', 'project_id', 'project_name',
+            'client_name', 'client_email','client_contact','description',
+            'start_date', 'end_date',
+            'priority', 'project_type',
+            'project_manager', 'project_manager_name',
+            'team_members', 'team_member_ids',
+            'total_budget', 'spent_amount', 'remaining_amount',
+            'project_logo', 'project_logo_url',
             'created_at',
         ]
+        read_only_fields = ['project_id', 'remaining_amount', 'created_at']
 
     def get_project_logo_url(self, obj):
         request = self.context.get("request")
-        if obj.project_logo and request:
-            return request.build_absolute_uri(obj.project_logo.url)
-        return None
+        return request.build_absolute_uri(obj.project_logo.url) if obj.project_logo and request else None
 
+    # CREATE → spent_amount ALWAYS ZERO
     def create(self, validated_data):
         team_ids = validated_data.pop('team_member_ids', [])
-        project = Project.objects.create(**validated_data)
+
+        project = Project.objects.create(
+            **validated_data,
+            spent_amount=Decimal('0.00')
+        )
+
         project.team_members.set(team_ids)
         return project
 
+
+
+    # UPDATE → NO spent_amount here
     def update(self, instance, validated_data):
         team_ids = validated_data.pop('team_member_ids', None)
 
+    # 🔹 Update all fields including spent_amount
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+    # 🔹 Auto-calculate remaining_amount (NO model change)
+        instance.remaining_amount = instance.total_budget - instance.spent_amount
+
         instance.save()
 
         if team_ids is not None:
@@ -126,37 +104,73 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 
-# ----------------------------
-# Project List (Minimal)
-# ----------------------------
-class TeamMemberImageSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
+    # ✅ Validation stays (already good)
+    def validate(self, data):
+        total = data.get(
+            "total_budget",
+            self.instance.total_budget if self.instance else Decimal('0')
+    )
 
-    class Meta:
-        model = Employee
-        fields = ['id', 'profile_image_url']
+        spent = data.get(
+            "spent_amount",
+            self.instance.spent_amount if self.instance else Decimal('0')
+    )
 
-    def get_profile_image_url(self, obj):
-        request = self.context.get("request")
-        if obj.profile_image and request:
-            return request.build_absolute_uri(obj.profile_image.url)
-        return None
+        if spent > total:
+            raise serializers.ValidationError({
+                "spent_amount": "Spent amount cannot exceed total budget."
+        })
+
+        return data
 
 
-class ProjectBasicListSerializer(serializers.ModelSerializer):
+class ProjectListSerializer(serializers.ModelSerializer):
     project_logo_url = serializers.SerializerMethodField()
-    team_members = TeamMemberImageSerializer(many=True, read_only=True)
+    project_manager_name = serializers.CharField(
+        source="project_manager.name",
+        read_only=True
+    )
+
+    team_members = EmployeeBasicSerializer(many=True, read_only=True)
+
 
     class Meta:
         model = Project
         fields = [
+            # IDs
             'id',
             'project_id',
+
+            # Project info
             'project_name',
+            'description',
+            'priority',
+            'project_type',
+
+            # Client
+            'client_name',
+            'client_email',
+            'client_contact',
+
+            # Dates
             'start_date',
             'end_date',
-            'project_logo_url',
+
+            # Manager & Team
+            'project_manager',
+            'project_manager_name',
             'team_members',
+
+            # Budget
+            'total_budget',
+            'spent_amount',
+            'remaining_amount',
+
+            # Files
+            'project_logo_url',
+
+            # Meta
+            'created_at',
         ]
 
     def get_project_logo_url(self, obj):
@@ -166,6 +180,9 @@ class ProjectBasicListSerializer(serializers.ModelSerializer):
         return None
 
 
+# =====================================================
+# Base Planning Serializer
+# =====================================================
 class BasePlanningSerializer(serializers.ModelSerializer):
 
     project_id = serializers.PrimaryKeyRelatedField(
@@ -199,6 +216,7 @@ class BasePlanningSerializer(serializers.ModelSerializer):
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
         instance.save()
 
         if team_ids is not None:
@@ -207,7 +225,9 @@ class BasePlanningSerializer(serializers.ModelSerializer):
         return instance
 
 
-
+# ----------------------------
+# Planning Phase Serializers
+# ----------------------------
 class ProjectPlanningSerializer(BasePlanningSerializer):
     class Meta:
         model = ProjectPlanning
@@ -281,4 +301,3 @@ class DeploymentPlanningSerializer(BasePlanningSerializer):
             'project_team_ids',
             'created_at'
         ]
-
