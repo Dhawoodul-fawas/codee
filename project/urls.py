@@ -2,33 +2,11 @@ from django.urls import path
 from .views import (
 
     # Project
+    PhaseTaskViewSet,
+    ProjectPhaseViewSet,
     ProjectViewSet,
     ProjectTypeFilterView,
 
-    # Planning - Project
-    ProjectPlanningCreateAPIView,
-    ProjectPlanningListAPIView,
-    ProjectPlanningDetailAPIView,
-
-    # Design
-    DesignPlanningCreateAPIView,
-    DesignPlanningListAPIView,
-    DesignPlanningDetailAPIView,
-
-    # Development
-    DevelopmentPlanningCreateAPIView,
-    DevelopmentPlanningListAPIView,
-    DevelopmentPlanningDetailAPIView,
-
-    # Testing
-    TestingPlanningCreateAPIView,
-    TestingPlanningListAPIView,
-    TestingPlanningDetailAPIView,
-
-    # Deployment
-    DeploymentPlanningCreateAPIView,
-    DeploymentPlanningListAPIView,
-    DeploymentPlanningDetailAPIView,
 )
 
 
@@ -43,6 +21,31 @@ project_detail = ProjectViewSet.as_view({
     "patch": "partial_update",
     "delete": "destroy"
 })
+
+# -----------------------------
+# Phase ViewSet mappings
+# -----------------------------
+phase_create = ProjectPhaseViewSet.as_view({"post": "create"})
+phase_list = ProjectPhaseViewSet.as_view({"get": "list"})
+phase_detail = ProjectPhaseViewSet.as_view({
+    "get": "retrieve",
+    "put": "update",
+    "patch": "partial_update",
+    "delete": "destroy"
+})
+
+# -----------------------------
+# Task ViewSet mappings
+# -----------------------------
+task_create = PhaseTaskViewSet.as_view({"post": "create"})
+task_list = PhaseTaskViewSet.as_view({"get": "list"})
+task_detail = PhaseTaskViewSet.as_view({
+    "get": "retrieve",
+    "put": "update",
+    "patch": "partial_update",
+    "delete": "destroy"
+})
+
 
 
 urlpatterns = [
@@ -64,100 +67,19 @@ urlpatterns = [
         name='project-filter-type'
     ),
 
+    # Project Phases
     # -----------------------------
-    # Project Planning
-    # -----------------------------
-    path(
-        'project-planning/create/',
-        ProjectPlanningCreateAPIView.as_view(),
-        name='project-planning-create'
-    ),
-    path(
-        'project-planning/list/',
-        ProjectPlanningListAPIView.as_view(),
-        name='project-planning-list'
-    ),
-    path(
-        'project-planning/edit/<int:pk>/',
-        ProjectPlanningDetailAPIView.as_view(),
-        name='project-planning-detail'
-    ),
+    path('phases/create/', phase_create, name='phase-create'),
+    path('phases/list/', phase_list, name='phase-list'),
+    path('phases/edit/<int:pk>/', phase_detail, name='phase-detail'),
 
     # -----------------------------
-    # Design Planning
+    # Phase Tasks
     # -----------------------------
-    path(
-        'design-planning/create/',
-        DesignPlanningCreateAPIView.as_view(),
-        name='design-planning-create'
-    ),
-    path(
-        'design-planning/list/',
-        DesignPlanningListAPIView.as_view(),
-        name='design-planning-list'
-    ),
-    path(
-        'design-planning/edit/<int:pk>/',
-        DesignPlanningDetailAPIView.as_view(),
-        name='design-planning-detail'
-    ),
-
-    # -----------------------------
-    # Development Planning
-    # -----------------------------
-    path(
-        'development-planning/create/',
-        DevelopmentPlanningCreateAPIView.as_view(),
-        name='development-planning-create'
-    ),
-    path(
-        'development-planning/list/',
-        DevelopmentPlanningListAPIView.as_view(),
-        name='development-planning-list'
-    ),
-    path(
-        'development-planning/edit/<int:pk>/',
-        DevelopmentPlanningDetailAPIView.as_view(),
-        name='development-planning-detail'
-    ),
-
-    # -----------------------------
-    # Testing Planning
-    # -----------------------------
-    path(
-        'testing-planning/create/',
-        TestingPlanningCreateAPIView.as_view(),
-        name='testing-planning-create'
-    ),
-    path(
-        'testing-planning/list/',
-        TestingPlanningListAPIView.as_view(),
-        name='testing-planning-list'
-    ),
-    path(
-        'testing-planning/edit/<int:pk>/',
-        TestingPlanningDetailAPIView.as_view(),
-        name='testing-planning-detail'
-    ),
-
-    # -----------------------------
-    # Deployment Planning
-    # -----------------------------
-    path(
-        'deployment-planning/create/',
-        DeploymentPlanningCreateAPIView.as_view(),
-        name='deployment-planning-create'
-    ),
-    path(
-        'deployment-planning/list/',
-        DeploymentPlanningListAPIView.as_view(),
-        name='deployment-planning-list'
-    ),
-    path(
-        'deployment-planning/edit/<int:pk>/',
-        DeploymentPlanningDetailAPIView.as_view(),
-        name='deployment-planning-detail'
-    ),
+    path('tasks/create/', task_create, name='task-create'),
+    path('tasks/list/', task_list, name='task-list'),
+    path('tasks/edit/<int:pk>/', task_detail, name='task-detail'),
 
 
+    
 ]

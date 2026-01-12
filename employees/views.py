@@ -1,8 +1,11 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
+
+from project.models import PhaseTask, Project
 
 from .models import Employee
 from .serializers import (
@@ -181,3 +184,36 @@ class InternListView(generics.ListAPIView):
             message="Intern basic list fetched successfully",
             data=serializer.data
         )
+
+class EmployeeProjectCardView(APIView):
+
+    def get(self, request, employee_id):
+        employee = Employee.objects.get(id=employee_id)
+
+        # All projects where this employee has tasks
+        projects = Project.objects.filter(
+            phases__tasks__assigned_to=employee
+        ).distinct()
+
+        assigned = projects.count()
+        completed = 0
+        pending = 0
+
+        for project in projects:
+            tasks = PhaseTask.objects.filter(
+                phase__project=project,
+                assigned_to=employee
+            )
+
+            if tasks.filter(status="pending").exists():
+                pending += 1
+            elif not tasks.exclude(status="completed").exists():
+                completed += 1
+
+        data = {
+            "assigned": assigned,
+            "completed": completed,
+            "pending": pending,
+        }
+
+        return Response(data)    

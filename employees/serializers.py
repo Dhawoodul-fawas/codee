@@ -139,6 +139,10 @@ class EmployeeAllListSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         url = obj.offer_letter.url
         return request.build_absolute_uri(url) if request else url
+    
+    assigned_projects = serializers.SerializerMethodField()
+    completed_projects = serializers.SerializerMethodField()
+    pending_projects = serializers.SerializerMethodField()
 
 
 class EmployeeBasicListSerializer(serializers.ModelSerializer):
@@ -153,3 +157,8 @@ class EmployeeBasicListSerializer(serializers.ModelSerializer):
             'phone',
             'email',
         ]
+
+class EmployeeProjectCardSerializer(serializers.Serializer):
+    assigned = serializers.IntegerField()
+    completed = serializers.IntegerField()
+    pending = serializers.IntegerField()

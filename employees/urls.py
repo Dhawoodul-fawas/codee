@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import EmployeeOnlyListView, EmployeeViewSet, InternListView, InternOnlyListView, StaffListView
+from .views import EmployeeOnlyListView, EmployeeProjectCardView, EmployeeViewSet, InternListView, InternOnlyListView, StaffListView
 
 employee_create = EmployeeViewSet.as_view({
     'post': 'create',
@@ -18,6 +18,7 @@ urlpatterns = [
     path('emp-list/', EmployeeOnlyListView.as_view(), name='employee_all_list'),
     path('interns-list/', InternOnlyListView.as_view(), name='employee_all_list'),
     path("employees/basic/", StaffListView.as_view(), name="employee-basic-list"),
-    path('interns/basic/', InternListView.as_view(), name="interns-basic-list")
+    path('interns/basic/', InternListView.as_view(), name="interns-basic-list"),
+    path("employees/<int:employee_id>/project-cards/",EmployeeProjectCardView.as_view()),
 
 ]

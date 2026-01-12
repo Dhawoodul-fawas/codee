@@ -120,78 +120,68 @@ class Project(models.Model):
         return f"{self.project_name} ({self.project_id})"
 
 
-# =====================================================
-# Abstract Base Planning Model
-# =====================================================
-class BasePlanning(models.Model):
+class ProjectPhase(models.Model):
 
-    start_date = models.DateField()
-    end_date = models.DateField()
+    PHASE_CHOICES = [
+        ("planning", "Project Planning"),
+        ("design", "Design"),
+        ("development", "Development"),
+        ("testing", "Testing"),
+        ("deployment", "Deployment"),
+    ]
 
-    project_teams = models.ManyToManyField(
-        Employee,
-        blank=True
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="phases"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    phase_type = models.CharField(
+        max_length=20,
+        choices=PHASE_CHOICES
+    )
+
+    description = models.TextField(blank=True)
+    assigned_to = models.ManyToManyField(
+    Employee,
+    related_name="assigned_phases",
+    blank=True
+)
+
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        abstract = True
-
-
-# =====================================================
-# Planning Phases
-# =====================================================
-class ProjectPlanning(BasePlanning):
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='planning'
-    )
+        unique_together = ("project", "phase_type")   # One phase per project
 
     def __str__(self):
-        return f"{self.project.project_name} Planning"
+        return f"{self.project.project_name} - {self.get_phase_type_display()}"
 
+class PhaseTask(models.Model):
 
-class DesignPlanning(BasePlanning):
-    project = models.OneToOneField(
-        Project,
+    phase = models.ForeignKey(
+        ProjectPhase,
         on_delete=models.CASCADE,
-        related_name='design_planning'
+        related_name="tasks"
     )
 
-    def __str__(self):
-        return f"{self.project.project_name} Design Planning"
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(Employee,on_delete=models.SET_NULL,null=True,blank=True)
 
-
-class DevelopmentPlanning(BasePlanning):
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='development_planning'
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("in_progress", "In Progress"),
+            ("completed", "Completed")
+        ],
+        default="pending"
     )
 
-    def __str__(self):
-        return f"{self.project.project_name} Development Planning"
-
-
-class TestingPlanning(BasePlanning):
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='testing_planning'
-    )
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.project.project_name} Testing Planning"
+        return self.title
 
-
-class DeploymentPlanning(BasePlanning):
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='deployment_planning'
-    )
-
-    def __str__(self):
-        return f"{self.project.project_name} Deployment Planning"

@@ -1,10 +1,9 @@
 from decimal import Decimal
 from rest_framework import serializers
 from .models import (
+    PhaseTask,
     Project,
-    ProjectPlanning, DesignPlanning,
-    DevelopmentPlanning, TestingPlanning,
-    DeploymentPlanning
+    ProjectPhase,
 )
 from employees.models import Employee
 
@@ -180,124 +179,125 @@ class ProjectListSerializer(serializers.ModelSerializer):
         return None
 
 
-# =====================================================
-# Base Planning Serializer
-# =====================================================
-class BasePlanningSerializer(serializers.ModelSerializer):
+class PhaseTaskSerializer(serializers.ModelSerializer):
 
-    project_id = serializers.PrimaryKeyRelatedField(
-        source='project',
+    assigned_to = EmployeeBasicSerializer(read_only=True)
+    employee_id = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = PhaseTask
+        fields = [
+            "id",
+            "phase",
+            "title",
+            "description",
+            "status",
+            "start_date",
+            "end_date",
+            "assigned_to",
+            "employee_id",
+        ]
+
+    def create(self, validated_data):
+        emp_code = validated_data.pop("employee_id", None)
+
+        if emp_code:
+            try:
+                employee = Employee.objects.get(employee_id=emp_code)
+                validated_data["assigned_to"] = employee
+            except Employee.DoesNotExist:
+                raise serializers.ValidationError({
+                    "employee_id": "Invalid Employee ID"
+                })
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        emp_code = validated_data.pop("employee_id", None)
+
+        if emp_code:
+            try:
+                instance.assigned_to = Employee.objects.get(employee_id=emp_code)
+            except Employee.DoesNotExist:
+                raise serializers.ValidationError({
+                    "employee_id": "Invalid Employee ID"
+                })
+
+        return super().update(instance, validated_data)
+
+
+class ProjectPhaseSerializer(serializers.ModelSerializer):
+
+    tasks = PhaseTaskSerializer(many=True, read_only=True)
+
+    # Accept PRJ-2026-0010
+    project_id = serializers.SlugRelatedField(
         queryset=Project.objects.all(),
+        slug_field="project_id",
+        source="project",
         write_only=True
     )
 
-    project_code = serializers.CharField(
-        source='project.project_id',
-        read_only=True
-    )
-
-    project_teams = EmployeeBasicSerializer(many=True, read_only=True)
-
-    project_team_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(),
-        many=True,
+    # Accept multiple EMP codes
+    employee_ids = serializers.ListField(
+        child=serializers.CharField(),
         write_only=True,
         required=False
     )
 
+    # Response fields
+    project = serializers.CharField(source="project.project_id", read_only=True)
+    project_name = serializers.CharField(source="project.project_name", read_only=True)
+    assigned_to = EmployeeBasicSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProjectPhase
+        fields = [
+            "id",
+            "project",
+            "project_id",
+            "project_name",
+            "phase_type",
+            "description",
+            "start_date",
+            "end_date",
+            "assigned_to",
+            "employee_ids",
+            "tasks",
+        ]
+
     def create(self, validated_data):
-        team_ids = validated_data.pop('project_team_ids', [])
-        planning = self.Meta.model.objects.create(**validated_data)
-        planning.project_teams.set(team_ids)
-        return planning
+        emp_codes = validated_data.pop("employee_ids", [])
+
+        phase = super().create(validated_data)
+
+        if emp_codes:
+            employees = Employee.objects.filter(employee_id__in=emp_codes)
+
+            if employees.count() != len(emp_codes):
+                raise serializers.ValidationError({
+                    "employee_ids": "One or more Employee IDs are invalid"
+                })
+
+            phase.assigned_to.set(employees)
+
+        return phase
 
     def update(self, instance, validated_data):
-        team_ids = validated_data.pop('project_team_ids', None)
+        emp_codes = validated_data.pop("employee_ids", None)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        if emp_codes is not None:
+            employees = Employee.objects.filter(employee_id__in=emp_codes)
 
-        instance.save()
+            if employees.count() != len(emp_codes):
+                raise serializers.ValidationError({
+                    "employee_ids": "One or more Employee IDs are invalid"
+                })
 
-        if team_ids is not None:
-            instance.project_teams.set(team_ids)
+            instance.assigned_to.set(employees)
 
-        return instance
-
-
-# ----------------------------
-# Planning Phase Serializers
-# ----------------------------
-class ProjectPlanningSerializer(BasePlanningSerializer):
-    class Meta:
-        model = ProjectPlanning
-        fields = [
-            'id',
-            'project_code',
-            'project_id',
-            'start_date',
-            'end_date',
-            'project_teams',
-            'project_team_ids',
-            'created_at'
-        ]
+        return super().update(instance, validated_data)
 
 
-class DesignPlanningSerializer(BasePlanningSerializer):
-    class Meta:
-        model = DesignPlanning
-        fields = [
-            'id',
-            'project_code',
-            'project_id',
-            'start_date',
-            'end_date',
-            'project_teams',
-            'project_team_ids',
-            'created_at'
-        ]
 
 
-class DevelopmentPlanningSerializer(BasePlanningSerializer):
-    class Meta:
-        model = DevelopmentPlanning
-        fields = [
-            'id',
-            'project_code',
-            'project_id',
-            'start_date',
-            'end_date',
-            'project_teams',
-            'project_team_ids',
-            'created_at'
-        ]
-
-
-class TestingPlanningSerializer(BasePlanningSerializer):
-    class Meta:
-        model = TestingPlanning
-        fields = [
-            'id',
-            'project_code',
-            'project_id',
-            'start_date',
-            'end_date',
-            'project_teams',
-            'project_team_ids',
-            'created_at'
-        ]
-
-
-class DeploymentPlanningSerializer(BasePlanningSerializer):
-    class Meta:
-        model = DeploymentPlanning
-        fields = [
-            'id',
-            'project_code',
-            'project_id',
-            'start_date',
-            'end_date',
-            'project_teams',
-            'project_team_ids',
-            'created_at'
-        ]
