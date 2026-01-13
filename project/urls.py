@@ -3,6 +3,7 @@ from .views import (
 
     # Project
     PhaseTaskViewSet,
+    ProjectFullDetailAPIView,
     ProjectPhaseViewSet,
     ProjectViewSet,
     ProjectTypeFilterView,
@@ -56,7 +57,8 @@ urlpatterns = [
     path('projects/create/', project_create, name='project-create'),
     path('projects/list/', project_list, name='project-list'),
     path('projects/basic/', project_list, name='project-basic-list'),
-    path('projects/edit/<int:pk>/', project_detail, name='project-detail'),
+    path('projects/edit/<str:project_id>/', project_detail, name='project-detail'),
+    path("projects/full/<str:project_id>/", ProjectFullDetailAPIView.as_view()),
 
     # -----------------------------
     # Project Filters
@@ -79,6 +81,9 @@ urlpatterns = [
     path('tasks/create/', task_create, name='task-create'),
     path('tasks/list/', task_list, name='task-list'),
     path('tasks/edit/<int:pk>/', task_detail, name='task-detail'),
+
+    
+
 
 
     

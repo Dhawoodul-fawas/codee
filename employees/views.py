@@ -1,6 +1,8 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -20,6 +22,8 @@ from .utils import api_response
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('-created_at')
     parser_classes = (MultiPartParser, FormParser)
+    lookup_field = "employee_id"
+    lookup_url_kwarg = "employee_id"
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
 
@@ -188,7 +192,7 @@ class InternListView(generics.ListAPIView):
 class EmployeeProjectCardView(APIView):
 
     def get(self, request, employee_id):
-        employee = Employee.objects.get(id=employee_id)
+        employee = get_object_or_404(Employee, employee_id=employee_id)
 
         # All projects where this employee has tasks
         projects = Project.objects.filter(
@@ -217,3 +221,45 @@ class EmployeeProjectCardView(APIView):
         }
 
         return Response(data)    
+
+class EmployeeFullDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, employee_id):
+        employee = get_object_or_404(Employee, employee_id=employee_id)
+
+        serializer = EmployeeAllListSerializer(
+            employee,
+            context={"request": request}
+        )
+
+        # Get all assigned projects
+        projects = Project.objects.filter(team_members=employee).prefetch_related("phases")
+
+        assigned = projects.count()
+        completed = 0
+        pending = 0
+
+        # Use same logic as serializer
+        for p in projects:
+            tasks = p.phases.all().values_list("tasks__status", flat=True)
+
+            if not tasks:
+                pending += 1
+            elif all(status == "completed" for status in tasks):
+                completed += 1
+            else:
+                pending += 1
+
+        return api_response(
+            True,
+            "Employee details fetched successfully",
+            {
+                "employee": serializer.data,
+                "project_cards": {
+                    "assigned": assigned,
+                    "completed": completed,
+                    "pending": pending
+                }
+            }
+        )    

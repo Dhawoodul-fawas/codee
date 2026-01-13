@@ -39,6 +39,44 @@ class Employee(models.Model):
         ('aadhaar', 'Aadhaar Card'),
         ('license', 'Driving License'),
     ]
+    SALARY_TYPE_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('hourly', 'Hourly'),
+        ('contract', 'Contract'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('bank', 'Bank Transfer'),
+        ('upi', 'UPI'),
+        ('cash', 'Cash'),
+        ('cheque', 'Cheque'),
+    ]
+
+    # -------------------------
+    # Reporting Manager
+    # -------------------------
+    reporting_manager = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='team_members',
+        limit_choices_to={'role': 'staff'}
+    )
+
+    salary_type = models.CharField(
+        max_length=20,
+        choices=SALARY_TYPE_CHOICES,
+        null=True,
+        blank=True
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        null=True,
+        blank=True
+    )
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
     employee_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
@@ -70,6 +108,7 @@ class Employee(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     def save(self, *args, **kwargs):
 
@@ -77,12 +116,14 @@ class Employee(models.Model):
         if self.password and not self.password.startswith("pbkdf2_sha256$"):
             self.password = make_password(self.password)
 
-        # Intern → no position, no salary
+        # Intern → no position, no salary, no salary type, no payment method
         if self.role == "intern":
             self.position = None
             self.salary = None
+            self.salary_type = None
+            self.payment_method = None
 
-        # ✅ Only staff can have offer letter
+        # Only staff can have offer letter
         if self.role != "staff":
             self.offer_letter = None
 
@@ -93,6 +134,18 @@ class Employee(models.Model):
         # Staff → must have salary
         if self.role == "staff" and self.salary is None:
             raise ValueError("Staff must have a salary amount!")
+
+        # Staff → must have salary type
+        if self.role == "staff" and not self.salary_type:
+            raise ValueError("Staff must have a salary type!")
+
+        # Staff → must have payment method
+        if self.role == "staff" and not self.payment_method:
+            raise ValueError("Staff must have a payment method!")
+
+        # Reporting manager must be staff
+        if self.reporting_manager and self.reporting_manager.role != "staff":
+            raise ValueError("Reporting Manager must be a staff employee")
 
         # AUTO GENERATE EMPLOYEE ID
         if not self.employee_id or self.employee_id.strip() == "":
@@ -112,6 +165,4 @@ class Employee(models.Model):
 
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.employee_id} - {self.name}"
 

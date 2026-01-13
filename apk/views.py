@@ -1,4 +1,5 @@
 from datetime import date
+import re
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -21,21 +22,24 @@ class ApkLoginView(APIView):
         if not email or not password:
             return api_response(False, "Email and password required", None, 400)
 
+        # Gmail-only validation
+        pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
+        if not re.match(pattern, email):
+            return api_response(False, "Only gmail.com email is allowed", None, 400)
+
         try:
-            user = Employee.objects.get(email=email)
+            user = Employee.objects.get(email__iexact=email)
         except Employee.DoesNotExist:
             return api_response(False, "Invalid credentials", None, 400)
 
+        # ✅ Only hash check — DO NOT re-validate format
         if not check_password(password, user.password):
             return api_response(False, "Invalid credentials", None, 400)
 
         today = date.today()
 
-        # Check if already logged in today
         if not LoginHistory.objects.filter(employee=user, login_date=today).exists():
-            LoginHistory.objects.create(
-                employee=user
-            )
+            LoginHistory.objects.create(employee=user)
 
         token = create_employee_token(user)
 

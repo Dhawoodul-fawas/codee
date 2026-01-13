@@ -1,5 +1,7 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, status
 from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
 
 from .models import (
     PhaseTask,
@@ -22,6 +24,8 @@ from .utils import api_response
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all().order_by('-created_at')
     permission_classes = [AllowAny]
+    lookup_field = "project_id"       # 🔥 important
+    lookup_url_kwarg = "project_id"
 
     def get_serializer_class(self):
         return ProjectListSerializer if self.action == 'list' else ProjectSerializer
@@ -139,3 +143,52 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_201_CREATED
         )
 
+class ProjectFullDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, project_id=project_id)
+
+        # Project data
+        project_data = ProjectSerializer(
+            project,
+            context={"request": request}
+        ).data
+
+        # All phases with tasks
+        phases = ProjectPhase.objects.filter(project=project).prefetch_related("tasks")
+
+        phase_data = []
+        total_tasks = 0
+        completed_tasks = 0
+
+        for phase in phases:
+            tasks = PhaseTask.objects.filter(phase=phase)
+
+            task_data = PhaseTaskSerializer(tasks, many=True).data
+
+            total_tasks += tasks.count()
+            completed_tasks += tasks.filter(status="completed").count()
+
+            phase_data.append({
+                "id": phase.id,
+                "phase_type": phase.phase_type,
+                "description": phase.description,
+                "start_date": phase.start_date,
+                "end_date": phase.end_date,
+                "tasks": task_data
+            })
+
+        progress = 0
+        if total_tasks > 0:
+            progress = int((completed_tasks / total_tasks) * 100)
+
+        return api_response(
+            True,
+            "Project full details fetched successfully",
+            {
+                "project": project_data,
+                "phases": phase_data,
+                "progress_percent": progress
+            }
+        )

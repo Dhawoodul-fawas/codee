@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 from rest_framework import serializers
 from .models import (
     PhaseTask,
@@ -50,6 +51,8 @@ class ProjectSerializer(serializers.ModelSerializer):
         required=False
     )
 
+    
+
     class Meta:
         model = Project
         fields = [
@@ -64,6 +67,30 @@ class ProjectSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = ['project_id', 'remaining_amount', 'created_at']
+        
+    # CLIENT EMAIL (gmail only)
+    # ---------------------------
+    def validate_client_email(self, value):
+        pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
+        if not re.match(pattern, value):
+            raise serializers.ValidationError(
+                "Client email must be a valid gmail.com address."
+            )
+        return value
+
+
+    # ---------------------------
+    # CLIENT CONTACT (10 digits)
+    # ---------------------------
+    def validate_client_contact(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Client contact must contain only digits")
+
+        if len(value) != 10:
+            raise serializers.ValidationError("Client contact must be exactly 10 digits")
+
+        return value
+        
 
     def get_project_logo_url(self, obj):
         request = self.context.get("request")
