@@ -22,8 +22,8 @@ class EmployeeListSerializer(serializers.ModelSerializer):
             'id', 'employee_id',
             'name', 'email', 'phone',
             'department', 'position',
-            'reporting_manager', 'reporting_manager_name',
-
+            'reporting_manager', 'reporting_manager_name','role',
+            'employment_type',
             'salary', 'salary_type', 'payment_method',
 
             'address', 'joining_date',
@@ -52,14 +52,15 @@ class EmployeeListSerializer(serializers.ModelSerializer):
 
     # ✅ Staff only
     def get_offer_letter_url(self, obj):
-        if obj.role != "staff" or not obj.offer_letter:
+        if obj.employment_type != "staff" or not obj.offer_letter:
             return None
         request = self.context.get("request")
         url = obj.offer_letter.url
         return request.build_absolute_uri(url) if request else url
 
     def get_salary(self, obj):
-        return obj.salary if obj.role == "staff" else None
+        return obj.salary if obj.employment_type == "staff" else None
+
 
 
 class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
@@ -69,7 +70,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
         model = Employee
         fields = [
             'id', 'employee_id', 'name', 'email', 'phone',
-            'department', 'role', 'password',
+            'department','employment_type', 'role', 'password',
 
             'position', 'salary',
             'salary_type', 'payment_method',
@@ -126,7 +127,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
 
     # ROLE-BASED VALIDATION
     def validate(self, data):
-        role = data.get("role", getattr(self.instance, "role", None))
+        employment_type = data.get("employment_type",getattr(self.instance, "employment_type", None))
         position = data.get("position", getattr(self.instance, "position", None))
         salary = data.get("salary", getattr(self.instance, "salary", None))
         offer_letter = data.get("offer_letter", getattr(self.instance, "offer_letter", None))
@@ -135,7 +136,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
         reporting_manager = data.get("reporting_manager", getattr(self.instance, "reporting_manager", None))
 
         # ---------------- Intern Rules ----------------
-        if role == "intern":
+        if employment_type == "intern":
             data["position"] = None
             data["salary"] = None
             data["offer_letter"] = None
@@ -144,7 +145,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
             return data
 
         # ---------------- Staff Rules ----------------
-        if role == "staff":
+        if employment_type == "staff":
             if not position:
                 raise serializers.ValidationError({
                     "position": "Position is required when role is 'staff'."
@@ -171,7 +172,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
                 })
 
         # ---------------- Reporting Manager Rule ----------------
-        if reporting_manager and reporting_manager.role != "staff":
+        if reporting_manager and reporting_manager.employment_type != "staff":
             raise serializers.ValidationError({
                 "reporting_manager": "Reporting manager must be a staff employee."
             })
@@ -193,11 +194,11 @@ class EmployeeAllListSerializer(serializers.ModelSerializer):
 
     # ---------------- Salary ----------------
     def get_salary(self, obj):
-        return obj.salary if obj.role == "staff" else None
+        return obj.salary if obj.employment_type == "staff" else None
 
     # ---------------- Offer Letter ----------------
     def get_offer_letter_url(self, obj):
-        if obj.role != "staff" or not obj.offer_letter:
+        if obj.employment_type != "staff" or not obj.offer_letter:
             return None
         request = self.context.get("request")
         url = obj.offer_letter.url

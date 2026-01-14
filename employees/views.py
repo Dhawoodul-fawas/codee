@@ -27,7 +27,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
 
-    filterset_fields = ['status', 'department', 'role', 'position', 'gender']
+    filterset_fields = ['status', 'department', 'employment_type', 'role', 'position', 'gender']
     search_fields = ['name', 'email', 'employee_id', 'phone']
     ordering_fields = ['created_at', 'joining_date', 'name']
     ordering = ['-created_at']
@@ -123,7 +123,7 @@ class EmployeeOnlyListView(generics.ListAPIView):
     serializer_class = EmployeeAllListSerializer
 
     def get_queryset(self):
-        return Employee.objects.filter(role="staff").order_by('-created_at')
+        return Employee.objects.filter(employment_type="staff").order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -141,7 +141,7 @@ class InternOnlyListView(generics.ListAPIView):
     serializer_class = EmployeeAllListSerializer
 
     def get_queryset(self):
-        return Employee.objects.filter(role="intern").order_by('-created_at')
+        return Employee.objects.filter(employment_type="intern").order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -159,7 +159,7 @@ class StaffListView(generics.ListAPIView):
     serializer_class = EmployeeBasicListSerializer
 
     def get_queryset(self):
-        return Employee.objects.filter(role="staff").order_by('-created_at')
+        return Employee.objects.filter(employment_type="staff").order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -177,7 +177,7 @@ class InternListView(generics.ListAPIView):
     serializer_class = EmployeeBasicListSerializer
 
     def get_queryset(self):
-        return Employee.objects.filter(role="intern").order_by('-created_at')
+        return Employee.objects.filter(employment_type="intern").order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

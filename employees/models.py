@@ -19,9 +19,9 @@ class Employee(models.Model):
         ('manager', 'Manager'),
     ]
 
-    ROLE_CHOICES = [
-        ('staff', 'Staff'),
-        ('intern', 'Intern'),
+    EMPLOYMENT_TYPE_CHOICES = [
+    ('staff', 'Staff'),
+    ('intern', 'Intern'),
     ]
 
     STATUS_CHOICES = [
@@ -61,7 +61,7 @@ class Employee(models.Model):
         null=True,
         blank=True,
         related_name='team_members',
-        limit_choices_to={'role': 'staff'}
+        limit_choices_to={'employment_type': 'staff'}
     )
 
     salary_type = models.CharField(
@@ -78,9 +78,10 @@ class Employee(models.Model):
         blank=True
     )
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
+    employment_type = models.CharField(max_length=20,choices=EMPLOYMENT_TYPE_CHOICES,default='staff')
     employee_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
     password = models.CharField(max_length=255, null=True, blank=True)
+
 
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -88,6 +89,8 @@ class Employee(models.Model):
 
     department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, blank=True, null=True)
+    role = models.CharField(max_length=100,null=True,blank=True,help_text="Job role like Developer, Team Lead, HR, Accountant"
+)
 
     address = models.TextField()
     joining_date = models.DateField()
@@ -117,39 +120,39 @@ class Employee(models.Model):
             self.password = make_password(self.password)
 
         # Intern → no position, no salary, no salary type, no payment method
-        if self.role == "intern":
+        if self.employment_type == "intern":
             self.position = None
             self.salary = None
             self.salary_type = None
             self.payment_method = None
 
         # Only staff can have offer letter
-        if self.role != "staff":
+        if self.employment_type != "staff":
             self.offer_letter = None
 
         # Staff → must have position
-        if self.role == "staff" and not self.position:
+        if self.employment_type == "staff" and not self.position:
             raise ValueError("Staff must select a position!")
 
         # Staff → must have salary
-        if self.role == "staff" and self.salary is None:
+        if self.employment_type == "staff" and self.salary is None:
             raise ValueError("Staff must have a salary amount!")
 
         # Staff → must have salary type
-        if self.role == "staff" and not self.salary_type:
+        if self.employment_type == "staff" and not self.salary_type:
             raise ValueError("Staff must have a salary type!")
 
         # Staff → must have payment method
-        if self.role == "staff" and not self.payment_method:
+        if self.employment_type == "staff" and not self.payment_method:
             raise ValueError("Staff must have a payment method!")
 
         # Reporting manager must be staff
-        if self.reporting_manager and self.reporting_manager.role != "staff":
+        if self.reporting_manager and self.reporting_manager.employment_type != "staff":
             raise ValueError("Reporting Manager must be a staff employee")
 
         # AUTO GENERATE EMPLOYEE ID
         if not self.employee_id or self.employee_id.strip() == "":
-            prefix = "INT" if self.role == "intern" else "EMP"
+            prefix = "INT" if self.employment_type == "intern" else "EMP"
 
             last_emp = Employee.objects.filter(
                 employee_id__startswith=prefix
