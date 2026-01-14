@@ -52,6 +52,8 @@ class Employee(models.Model):
         ('cheque', 'Cheque'),
     ]
 
+
+    is_manager = models.BooleanField(default=False)
     # -------------------------
     # Reporting Manager
     # -------------------------
@@ -61,7 +63,7 @@ class Employee(models.Model):
         null=True,
         blank=True,
         related_name='team_members',
-        limit_choices_to={'employment_type': 'staff'}
+        limit_choices_to={'employment_type': 'staff', 'is_manager': True}
     )
 
     salary_type = models.CharField(
@@ -89,8 +91,7 @@ class Employee(models.Model):
 
     department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, blank=True, null=True)
-    role = models.CharField(max_length=100,null=True,blank=True,help_text="Job role like Developer, Team Lead, HR, Accountant"
-)
+    role = models.CharField(max_length=100,null=True,blank=True,help_text="Job role like Developer, Team Lead, HR, Accountant")
 
     address = models.TextField()
     joining_date = models.DateField()
@@ -103,8 +104,8 @@ class Employee(models.Model):
 
     id_proof_type = models.CharField(max_length=20, choices=ID_PROOF_CHOICES, null=True, blank=True)
     id_proof_document = models.FileField(upload_to="employee_id_proofs/", null=True, blank=True)
+    resume = models.FileField(upload_to="employee_resumes/", null=True, blank=True)
 
-    # ✅ NEW FIELD (staff only)
     offer_letter = models.FileField(upload_to="employee_offer_letters/", null=True, blank=True)
 
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -129,6 +130,7 @@ class Employee(models.Model):
         # Only staff can have offer letter
         if self.employment_type != "staff":
             self.offer_letter = None
+            self.resume = None
 
         # Staff → must have position
         if self.employment_type == "staff" and not self.position:
@@ -146,9 +148,14 @@ class Employee(models.Model):
         if self.employment_type == "staff" and not self.payment_method:
             raise ValueError("Staff must have a payment method!")
 
-        # Reporting manager must be staff
-        if self.reporting_manager and self.reporting_manager.employment_type != "staff":
-            raise ValueError("Reporting Manager must be a staff employee")
+        # Reporting manager rules
+        if not self.is_manager:
+            if not self.reporting_manager:
+                raise ValueError("Reporting Manager is required for non-managers")
+
+        if self.reporting_manager:
+            if self.reporting_manager.employment_type != "staff" or not self.reporting_manager.is_manager:
+                raise ValueError("Reporting Manager must be a staff manager")
 
         # AUTO GENERATE EMPLOYEE ID
         if not self.employee_id or self.employee_id.strip() == "":

@@ -19,20 +19,46 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id',
-            'name', 'email', 'phone',
-            'department', 'position',
-            'reporting_manager', 'reporting_manager_name','role',
-            'employment_type',
-            'salary', 'salary_type', 'payment_method',
+            # IDs
+            'id',
+            'employee_id',
 
-            'address', 'joining_date',
-            'date_of_birth', 'gender',
+            # Basic Info
+            'name',
+            'email',
+            'phone',
+
+            # Job / Role Info
+            'department',
+            'position',
+            'is_manager',
+            'reporting_manager',
+            'reporting_manager_name',
+            'role',
+            'employment_type',
+
+            # Salary Info
+            'salary',
+            'salary_type',
+            'payment_method',
+
+            # Personal Info
+            'address',
+            'joining_date',
+            'date_of_birth',
+            'gender',
+
+            # Documents / Media (URLs)
             'profile_image_url',
-            'id_proof_type', 'id_proof_document_url',
+            'id_proof_type',
+            'id_proof_document_url',
             'offer_letter_url',
+            'resume',
+
+            # Status & System
             'status',
-            'created_at', 'updated_at'
+            'created_at',
+            'updated_at',
         ]
 
 
@@ -69,21 +95,48 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'name', 'email', 'phone',
-            'department','employment_type', 'role', 'password',
+            # Primary & System IDs
+                'id',
+                'employee_id',
 
-            'position', 'salary',
-            'salary_type', 'payment_method',
-            'reporting_manager',
+                # Personal Information
+                'name',
+                'email',
+                'phone',
+                'gender',
+                'date_of_birth',
+                'profile_image',
 
-            'address', 'joining_date',
-            'date_of_birth', 'gender',
-            'profile_image',
-            'id_proof_type',
-            'id_proof_document',
-            'offer_letter',
-            'status',
-            'created_at', 'updated_at',
+                # Employment Details
+                'department',
+                'employment_type',
+                'role',
+                'position',
+                'is_manager',
+                'reporting_manager',
+                'joining_date',
+                'status',
+
+                # Salary & Payment
+                'salary',
+                'salary_type',
+                'payment_method',
+
+                # Documents
+                'id_proof_type',
+                'id_proof_document',
+                'offer_letter',
+                'resume',
+
+                # Address
+                'address',
+
+                # Authentication (usually write-only)
+                'password',
+
+                # Timestamps
+                'created_at',
+                'updated_at',
         ]
         read_only_fields = ['employee_id', 'created_at', 'updated_at']
 
@@ -171,11 +224,25 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
                     "offer_letter": "Offer letter is required for staff."
                 })
 
-        # ---------------- Reporting Manager Rule ----------------
-        if reporting_manager and reporting_manager.employment_type != "staff":
-            raise serializers.ValidationError({
-                "reporting_manager": "Reporting manager must be a staff employee."
-            })
+       # ---------------- Reporting Manager Rule ----------------
+        is_manager = data.get("is_manager", getattr(self.instance, "is_manager", False))
+        reporting_manager = data.get("reporting_manager", getattr(self.instance, "reporting_manager", None))
+
+        if is_manager:
+            # Managers should not have reporting manager
+            data["reporting_manager"] = None
+        else:
+            # Non-managers must have reporting manager
+            if not reporting_manager:
+                raise serializers.ValidationError({
+                    "reporting_manager": "Reporting manager is required when is_manager is false."
+                })
+
+            if reporting_manager.employment_type != "staff" or not reporting_manager.is_manager:
+                raise serializers.ValidationError({
+                    "reporting_manager": "Reporting manager must be a staff manager."
+                })
+
 
         return data
 
