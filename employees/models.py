@@ -148,14 +148,29 @@ class Employee(models.Model):
         if self.employment_type == "staff" and not self.payment_method:
             raise ValueError("Staff must have a payment method!")
 
-        # Reporting manager rules
-        if not self.is_manager:
-            if not self.reporting_manager:
-                raise ValueError("Reporting Manager is required for non-managers")
+# Reporting Manager Rules
 
-        if self.reporting_manager:
-            if self.reporting_manager.employment_type != "staff" or not self.reporting_manager.is_manager:
-                raise ValueError("Reporting Manager must be a staff manager")
+# Interns never have reporting managers
+        if self.employment_type == "intern":
+            self.reporting_manager = None
+
+        # Staff managers don't need reporting manager
+        elif self.is_manager:
+            self.reporting_manager = None
+
+        # Staff non-managers MUST have reporting manager
+        else:
+            if not self.reporting_manager:
+                raise ValueError("Reporting Manager is required for staff employees")
+
+            # Reporting manager must be staff
+            if self.reporting_manager.employment_type != "staff":
+                raise ValueError("Reporting Manager must be a staff employee")
+
+            # Reporting manager must be a manager
+            if not self.reporting_manager.is_manager:
+                raise ValueError("Reporting Manager must be a manager")
+
 
         # AUTO GENERATE EMPLOYEE ID
         if not self.employee_id or self.employee_id.strip() == "":
