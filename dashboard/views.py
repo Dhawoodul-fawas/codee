@@ -5,7 +5,7 @@ from django.db.models.functions import TruncMonth
 from datetime import date
 
 from employees.models import Employee
-from project.models import Project
+from project.models import PhaseTask, Project
 from apk.models import Attendance
 
 
@@ -13,12 +13,12 @@ from apk.models import Attendance
 # Project status from Phase → Task
 # ---------------------------------------------
 def get_project_status(project):
-    tasks = project.phases.all().values_list("tasks__status", flat=True)
+    tasks = PhaseTask.objects.filter(phase__project=project)
 
-    if not tasks:
+    if not tasks.exists():
         return "pending"
 
-    if all(s == "completed" for s in tasks):
+    if not tasks.exclude(status="completed").exists():
         return "completed"
 
     return "ongoing"
@@ -81,10 +81,14 @@ class OngoingProjectsAPIView(APIView):
             if get_project_status(p) != "ongoing":
                 continue
 
-            total_tasks = p.phases.all().values_list("tasks__id", flat=True).count()
-            completed_tasks = p.phases.all().values_list(
-                "tasks__status", flat=True
-            ).filter(status="completed").count()
+            total_tasks = PhaseTask.objects.filter(
+                phase__project=p
+            ).count()
+
+            completed_tasks = PhaseTask.objects.filter(
+                phase__project=p,
+                status="completed"
+            ).count()
 
             progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
 
