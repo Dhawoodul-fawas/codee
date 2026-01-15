@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from rest_framework.generics import ListAPIView
 from project.models import PhaseTask, Project
 
 from .models import Employee
@@ -15,6 +15,7 @@ from .serializers import (
     EmployeeBasicListSerializer,
     EmployeeListSerializer,
     EmployeeCreateUpdateSerializer,
+    ManagerListSerializer,
 )
 from .utils import api_response
 
@@ -120,7 +121,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
 # STAFF ONLY LIST
 class EmployeeOnlyListView(generics.ListAPIView):
-    serializer_class = EmployeeAllListSerializer
+    serializer_class = EmployeeListSerializer
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="staff").order_by('-created_at')
@@ -138,7 +139,7 @@ class EmployeeOnlyListView(generics.ListAPIView):
 
 # ✅ INTERN ONLY FULL LIST
 class InternOnlyListView(generics.ListAPIView):
-    serializer_class = EmployeeAllListSerializer
+    serializer_class = EmployeeListSerializer
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="intern").order_by('-created_at')
@@ -228,7 +229,7 @@ class EmployeeFullDetailAPIView(APIView):
     def get(self, request, employee_id):
         employee = get_object_or_404(Employee, employee_id=employee_id)
 
-        serializer = EmployeeAllListSerializer(
+        serializer = EmployeeListSerializer(
             employee,
             context={"request": request}
         )
@@ -262,4 +263,15 @@ class EmployeeFullDetailAPIView(APIView):
                     "pending": pending
                 }
             }
-        )    
+        )
+
+class ManagerListAPIView(ListAPIView):
+    serializer_class = ManagerListSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Employee.objects.filter(
+            employment_type="staff",
+            is_manager=True,
+            status="active"
+        ).order_by("name")        

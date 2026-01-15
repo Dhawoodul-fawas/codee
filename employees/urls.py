@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import EmployeeFullDetailAPIView, EmployeeOnlyListView, EmployeeProjectCardView, EmployeeViewSet, InternListView, InternOnlyListView, StaffListView
+from .views import EmployeeFullDetailAPIView, EmployeeOnlyListView, EmployeeProjectCardView, EmployeeViewSet, InternListView, InternOnlyListView, ManagerListAPIView, StaffListView
 
 employee_create = EmployeeViewSet.as_view({
     'post': 'create',
@@ -13,14 +13,39 @@ employee_detail = EmployeeViewSet.as_view({
 })
 
 urlpatterns = [
-    path('emp/', employee_create, name='employee_create'), 
-    path('empl/<str:employee_id>/', employee_detail, name='employee_detail'),
-    path('emp-list/', EmployeeOnlyListView.as_view(), name='employee_all_list'),
-    path('interns-list/', InternOnlyListView.as_view(), name='employee_all_list'),
-    path("employees/basic/", StaffListView.as_view(), name="employee-basic-list"),
-    path('interns/basic/', InternListView.as_view(), name="interns-basic-list"),
-    path("employees/<int:employee_id>/project-cards/",EmployeeProjectCardView.as_view()),
-    path("employee/full/<str:employee_id>/", EmployeeFullDetailAPIView.as_view()),
+    path('emp/', employee_create, name='employee-create'),
+
+    path('emp-edit/<str:employee_id>/',employee_detail,name='emp_edit'),
 
 
+    path('emp-list/', EmployeeOnlyListView.as_view(), name='employee-list'),
+
+    path('interns-list/', InternOnlyListView.as_view(), name='intern-list'),
+
+    path('employees/basic/', StaffListView.as_view(), name='employee-basic-list'),
+
+    path('interns/basic/', InternListView.as_view(), name='intern-basic-list'),
+
+    path(
+        'employees/<int:employee_id>/project-cards/',
+        EmployeeProjectCardView.as_view(),
+        name='employee-project-cards'
+    ),
+
+    path(
+        'employee/full/<str:employee_id>/',
+        EmployeeFullDetailAPIView.as_view(),
+        name='employee-full-detail'
+    ),
+
+    path(
+        'employees/managers/',
+        ManagerListAPIView.as_view(),
+        name='manager-list'
+    ),
 ]
+
+
+
+
+

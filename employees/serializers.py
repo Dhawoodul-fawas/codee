@@ -383,6 +383,18 @@ class EmployeeBasicListSerializer(serializers.ModelSerializer):
             'email',
         ]
 
+class ManagerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = [
+            "id",
+            "employee_id",
+            "name",
+            "department",
+            "email",
+            "phone"
+        ]
+
 class EmployeeProjectCardSerializer(serializers.Serializer):
     assigned = serializers.IntegerField()
     completed = serializers.IntegerField()

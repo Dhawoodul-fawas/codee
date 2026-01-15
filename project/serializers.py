@@ -56,14 +56,45 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'id', 'project_id', 'project_name',
-            'client_name', 'client_email','client_contact','description',
-            'start_date', 'end_date',
-            'priority', 'project_type',
-            'project_manager', 'project_manager_name',
-            'team_members', 'team_member_ids',
-            'total_budget', 'spent_amount', 'remaining_amount',
-            'project_logo', 'project_logo_url',
+            # IDs
+            'id',
+            'project_id',
+
+            # Basic Project Info
+            'project_name',
+            'description',
+
+            # Client Info
+            'client_name',
+            'client_email',
+            'client_contact',
+
+            # Schedule
+            'start_date',
+            'end_date',
+
+            # Classification
+            'priority',
+            'project_type',
+
+            # Management
+            'project_manager',
+            'project_manager_name',
+
+            # Team
+            'team_members',
+            'team_member_ids',
+
+            # Finance
+            'total_budget',
+            'spent_amount',
+            'remaining_amount',
+
+            # Media
+            'project_logo',
+            'project_logo_url',
+
+            # System
             'created_at',
         ]
         read_only_fields = ['project_id', 'remaining_amount', 'created_at']

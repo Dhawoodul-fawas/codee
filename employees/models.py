@@ -113,6 +113,8 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    def __str__(self):
+        return f"{self.employee_id} - {self.name}"
 
     def save(self, *args, **kwargs):
 
@@ -148,9 +150,8 @@ class Employee(models.Model):
         if self.employment_type == "staff" and not self.payment_method:
             raise ValueError("Staff must have a payment method!")
 
-# Reporting Manager Rules
 
-# Interns never have reporting managers
+            # Interns never have reporting managers
         if self.employment_type == "intern":
             self.reporting_manager = None
 
@@ -186,7 +187,7 @@ class Employee(models.Model):
             else:
                 last_number = 0
 
-            self.employee_id = f"{prefix}{last_number + 1:03d}"
+            self.employee_id = f"{prefix}{last_number + 1:03d}"        
 
         super().save(*args, **kwargs)
 
