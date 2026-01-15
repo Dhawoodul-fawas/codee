@@ -90,6 +90,8 @@ class OngoingProjectsAPIView(APIView):
                 status="completed"
             ).count()
 
+
+
             progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
 
             members = [
