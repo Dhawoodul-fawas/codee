@@ -14,22 +14,14 @@ employee_detail = EmployeeViewSet.as_view({
 
 urlpatterns = [
     path('emp/', employee_create, name='employee-create'),
-
     path('emp-edit/<str:employee_id>/',employee_detail,name='emp_edit'),
-
-
     path('emp-list/', EmployeeOnlyListView.as_view(), name='employee-list'),
-
     path('interns-list/', InternOnlyListView.as_view(), name='intern-list'),
-
     path('employees/basic/', StaffListView.as_view(), name='employee-basic-list'),
 
     path('interns/basic/', InternListView.as_view(), name='intern-basic-list'),
 
-    path(
-        'employees/<int:employee_id>/project-cards/',
-        EmployeeProjectCardView.as_view(),
-        name='employee-project-cards'
+    path('employees/<int:employee_id>/project-cards/',EmployeeProjectCardView.as_view(),name='employee-project-cards'
     ),
 
     path(

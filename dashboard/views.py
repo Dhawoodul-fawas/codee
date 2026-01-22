@@ -149,7 +149,20 @@ class ProjectStatusAPIView(APIView):
         ongoing = 0
         pending = 0
 
-        for project in Project.objects.prefetch_related("phases__tasks"):
+        projects = Project.objects.prefetch_related("phases__tasks")
+        total_projects = projects.count()
+
+        if total_projects == 0:
+            return Response({
+                "success": True,
+                "data": {
+                    "completed": 0,
+                    "ongoing": 0,
+                    "pending": 0
+                }
+            })
+
+        for project in projects:
             status = get_project_status(project)
 
             if status == "completed":
@@ -162,8 +175,8 @@ class ProjectStatusAPIView(APIView):
         return Response({
             "success": True,
             "data": {
-                "completed": completed,
-                "ongoing": ongoing,
-                "pending": pending
+                "completed": round((completed / total_projects) * 100, 2),
+                "ongoing": round((ongoing / total_projects) * 100, 2),
+                "pending": round((pending / total_projects) * 100, 2)
             }
         })
