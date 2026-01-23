@@ -5,16 +5,13 @@ employee_create = EmployeeViewSet.as_view({
     'post': 'create',
 })
 
-employee_detail = EmployeeViewSet.as_view({
-    'get': 'retrieve',
-    'put': 'update',
-    'patch': 'partial_update',
-    'delete': 'destroy',
-})
+employee_edit = EmployeeViewSet.as_view({'patch': 'partial_update',})
+employee_delete = EmployeeViewSet.as_view({'delete': 'destroy',})
 
 urlpatterns = [
     path('emp/', employee_create, name='employee-create'),
-    path('emp-edit/<str:employee_id>/',employee_detail,name='emp_edit'),
+    path('emp-edit/<str:employee_id>/',employee_edit,name='emp_edit'),
+    path('emp-delete/<str:employee_id>/',employee_delete,name='emp_delete'),
     path('emp-list/', EmployeeOnlyListView.as_view(), name='employee-list'),
     path('interns-list/', InternOnlyListView.as_view(), name='intern-list'),
     path('employees/basic/', StaffListView.as_view(), name='employee-basic-list'),

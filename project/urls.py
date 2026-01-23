@@ -11,41 +11,29 @@ from .views import (
 )
 
 
-# -----------------------------
+# ---------`--------------------
 # Project ViewSet mappings
 # -----------------------------
 project_create = ProjectViewSet.as_view({"post": "create"})
 project_list = ProjectViewSet.as_view({"get": "list"})
-project_detail = ProjectViewSet.as_view({
-    "get": "retrieve",
-    "put": "update",
-    "patch": "partial_update",
-    "delete": "destroy"
-})
+project_edit = ProjectViewSet.as_view({"patch": "partial_update"})
+project_delete = ProjectViewSet.as_view({"delete": "destroy"})
 
 # -----------------------------
 # Phase ViewSet mappings
 # -----------------------------
 phase_create = ProjectPhaseViewSet.as_view({"post": "create"})
 phase_list = ProjectPhaseViewSet.as_view({"get": "list"})
-phase_detail = ProjectPhaseViewSet.as_view({
-    "get": "retrieve",
-    "put": "update",
-    "patch": "partial_update",
-    "delete": "destroy"
-})
+phase_edit = ProjectPhaseViewSet.as_view({"patch": "partial_update",})
+phase_delete = ProjectPhaseViewSet.as_view({"delete": "destroy",})
 
 # -----------------------------
 # Task ViewSet mappings
 # -----------------------------
 task_create = PhaseTaskViewSet.as_view({"post": "create"})
 task_list = PhaseTaskViewSet.as_view({"get": "list"})
-task_detail = PhaseTaskViewSet.as_view({
-    "get": "retrieve",
-    "put": "update",
-    "patch": "partial_update",
-    "delete": "destroy"
-})
+task_edit = PhaseTaskViewSet.as_view({"patch": "partial_update",})
+task_delete = PhaseTaskViewSet.as_view({"delete": "destroy",})
 
 
 
@@ -56,8 +44,8 @@ urlpatterns = [
     # -----------------------------
     path('projects/create/', project_create, name='project-create'),
     path('projects/list/', project_list, name='project-list'),
-    path('projects/basic/', project_list, name='project-basic-list'),
-    path('projects/edit/<str:project_id>/', project_detail, name='project-detail'),
+    path('projects/edit/<str:project_id>/', project_edit, name='project-edit'),
+    path('projects/delete/<str:project_id>/', project_delete, name='project-delete'),
     path("projects/full/<str:project_id>/", ProjectFullDetailAPIView.as_view()),
 
     # -----------------------------
@@ -73,18 +61,16 @@ urlpatterns = [
     # -----------------------------
     path('phases/create/', phase_create, name='phase-create'),
     path('phases/list/', phase_list, name='phase-list'),
-    path('phases/edit/<int:pk>/', phase_detail, name='phase-detail'),
+    path('phases/edit/<str:project_id>/',phase_edit,name='phase-edit'),
+    path('phases/delete/<str:project_id>/',phase_delete,name='phase-delete'),
 
     # -----------------------------
     # Phase Tasks
     # -----------------------------
     path('tasks/create/', task_create, name='task-create'),
     path('tasks/list/', task_list, name='task-list'),
-    path('tasks/edit/<int:pk>/', task_detail, name='task-detail'),
-
-    
-
-
+    path('tasks/edit/<int:pk>/', task_edit, name='task-edit'),
+    path('tasks/delete/<int:pk>/', task_delete, name='task-delete'),
 
     
 ]

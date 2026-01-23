@@ -16,8 +16,11 @@ from .utils import api_response, create_employee_token
 
 class ApkLoginView(APIView):
     def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
+        email = request.data.get("email", "").strip().lower()
+        password = request.data.get("password", "").strip()
+
+        print("EMAIL RECEIVED:", repr(email))
+        print("PASSWORD RECEIVED:", repr(password))
 
         if not email or not password:
             return api_response(False, "Email and password required", None, 400)

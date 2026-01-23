@@ -11,6 +11,11 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     offer_letter_url = serializers.SerializerMethodField()
     salary = serializers.SerializerMethodField()
 
+    reporting_manager = serializers.CharField(
+        source="reporting_manager.employee_id",
+        read_only=True
+    )
+
     reporting_manager_name = serializers.CharField(
         source="reporting_manager.name",
         read_only=True

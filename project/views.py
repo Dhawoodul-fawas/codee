@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, status
 from rest_framework.permissions import AllowAny
@@ -24,7 +25,7 @@ from .utils import api_response
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all().order_by('-created_at')
     permission_classes = [AllowAny]
-    lookup_field = "project_id"       # 🔥 important
+    lookup_field = "project_id"
     lookup_url_kwarg = "project_id"
 
     def get_serializer_class(self):
@@ -32,6 +33,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {"request": self.request}
+
+    # ✅ FIX: LIST RESPONSE WRAPPED
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_queryset(),
+            many=True,
+            context={"request": request}
+        )
+        return api_response(
+            success=True,
+            message="Projects fetched successfully",
+            data=serializer.data
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(
@@ -110,12 +124,32 @@ class ProjectTypeFilterView(generics.ListAPIView):
         )
 
 class ProjectPhaseViewSet(viewsets.ModelViewSet):
-    queryset = ProjectPhase.objects.all()
     serializer_class = ProjectPhaseSerializer
     permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        project_id = self.kwargs.get("project_id")
+        return ProjectPhase.objects.filter(
+            project__project_id=project_id
+        )
+
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_queryset(),
+            many=True,
+            context={"request": request}
+        )
+        return api_response(
+            success=True,
+            message="Project phases fetched successfully",
+            data=serializer.data
+        )
+
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -124,15 +158,54 @@ class ProjectPhaseViewSet(viewsets.ModelViewSet):
             message="Phase added successfully",
             data=serializer.data,
             status_code=status.HTTP_201_CREATED
+    )
+
+
+        return api_response(
+            success=True,
+            message="Phase added successfully",
+            data=serializer.data,
+            status_code=status.HTTP_201_CREATED
         )
 
+
+
 class PhaseTaskViewSet(viewsets.ModelViewSet):
-    queryset = PhaseTask.objects.all()
     serializer_class = PhaseTaskSerializer
     permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        phase_id = self.request.query_params.get("phase")
+
+        queryset = PhaseTask.objects.select_related(
+            "phase",
+            "phase__project"
+        )
+
+        if phase_id:
+            queryset = queryset.filter(phase__phase_id=phase_id)
+
+
+        return queryset
+
+
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_queryset(),
+            many=True,
+            context={"request": request}
+        )
+        return api_response(
+            success=True,
+            message="Tasks fetched successfully",
+            data=serializer.data
+        )
+
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -143,29 +216,30 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_201_CREATED
         )
 
+
 class ProjectFullDetailAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, project_id):
         project = get_object_or_404(Project, project_id=project_id)
 
-        # Project data
         project_data = ProjectSerializer(
             project,
             context={"request": request}
         ).data
 
-        # All phases with tasks
-        phases = ProjectPhase.objects.filter(project=project).prefetch_related("tasks")
+        phases = ProjectPhase.objects.filter(project=project).prefetch_related(
+        "tasks",
+        "tasks__assigned_to"
+)
+
 
         phase_data = []
         total_tasks = 0
         completed_tasks = 0
 
         for phase in phases:
-            tasks = PhaseTask.objects.filter(phase=phase)
-
-            task_data = PhaseTaskSerializer(tasks, many=True).data
+            tasks = phase.tasks.all()
 
             total_tasks += tasks.count()
             completed_tasks += tasks.filter(status="completed").count()
@@ -176,17 +250,16 @@ class ProjectFullDetailAPIView(APIView):
                 "description": phase.description,
                 "start_date": phase.start_date,
                 "end_date": phase.end_date,
-                "tasks": task_data
+                "tasks":PhaseTaskSerializer(tasks,many=True,context={"request": request}).data
+
             })
 
-        progress = 0
-        if total_tasks > 0:
-            progress = int((completed_tasks / total_tasks) * 100)
+        progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
 
         return api_response(
-            True,
-            "Project full details fetched successfully",
-            {
+            success=True,
+            message="Project full details fetched successfully",
+            data={
                 "project": project_data,
                 "phases": phase_data,
                 "progress_percent": progress

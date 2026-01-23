@@ -17,7 +17,7 @@ class EmployeeBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = ['id', 'name', 'department', 'profile_image_url']
+        fields = ['employee_id', 'name', 'department', 'profile_image_url']
 
     def get_profile_image_url(self, obj):
         request = self.context.get("request")
@@ -32,10 +32,25 @@ class EmployeeBasicSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
 
     project_logo_url = serializers.SerializerMethodField()
+    # ✅ READ → show EMP019
+    project_manager = serializers.CharField(
+        source="project_manager.employee_id",
+        read_only=True
+    )
+
+    # ✅ READ → manager name
     project_manager_name = serializers.CharField(
         source="project_manager.name",
         read_only=True
     )
+
+    # ✅ WRITE → accept EMP019
+    project_manager_id = serializers.SlugRelatedField(
+    queryset=Employee.objects.all(),
+    slug_field="employee_id",
+    source="project_manager",   # 🔥 THIS FIXES IT
+    write_only=True
+)
 
     team_members = EmployeeBasicSerializer(many=True, read_only=True)
     team_member_ids = serializers.PrimaryKeyRelatedField(
@@ -79,6 +94,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
             # Management
             'project_manager',
+            'project_manager_id', 
             'project_manager_name',
 
             # Team
@@ -183,6 +199,11 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class ProjectListSerializer(serializers.ModelSerializer):
     project_logo_url = serializers.SerializerMethodField()
+    project_manager = serializers.CharField(
+        source="project_manager.employee_id",
+        read_only=True
+    )
+
     project_manager_name = serializers.CharField(
         source="project_manager.name",
         read_only=True
@@ -238,14 +259,22 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
 
 class PhaseTaskSerializer(serializers.ModelSerializer):
+    # READ
+    assigned_to = EmployeeBasicSerializer(many=True, read_only=True)
 
-    assigned_to = EmployeeBasicSerializer(read_only=True)
-    employee_id = serializers.CharField(write_only=True, required=False)
+    # WRITE → accept EMP001, EMP002
+    employee_ids = serializers.ListField(
+        child=serializers.CharField(),
+        write_only=True,
+        required=False
+    )
 
     class Meta:
         model = PhaseTask
+        read_only_fields = ["task_id"]
         fields = [
             "id",
+            "task_id",
             "phase",
             "title",
             "description",
@@ -253,42 +282,60 @@ class PhaseTaskSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "assigned_to",
-            "employee_id",
+            "employee_ids",
         ]
 
-    def create(self, validated_data):
-        emp_code = validated_data.pop("employee_id", None)
+    def _get_project(self, validated_data):
+        phase = validated_data.get("phase") or self.instance.phase
+        return phase.project
 
-        if emp_code:
-            try:
-                employee = Employee.objects.get(employee_id=emp_code)
-                validated_data["assigned_to"] = employee
-            except Employee.DoesNotExist:
+    def create(self, validated_data):
+        emp_codes = validated_data.pop("employee_ids", [])
+        task = super().create(validated_data)
+
+        if emp_codes:
+            project = self._get_project(validated_data)
+
+            employees = Employee.objects.filter(
+                employee_id__in=emp_codes,
+                project_teams=project   # 🔥 restriction
+            )
+
+            if employees.count() != len(emp_codes):
                 raise serializers.ValidationError({
-                    "employee_id": "Invalid Employee ID"
+                    "employee_ids": "Employees must belong to the project team."
                 })
 
-        return super().create(validated_data)
+            task.assigned_to.set(employees)
+
+        return task
 
     def update(self, instance, validated_data):
-        emp_code = validated_data.pop("employee_id", None)
+        emp_codes = validated_data.pop("employee_ids", None)
 
-        if emp_code:
-            try:
-                instance.assigned_to = Employee.objects.get(employee_id=emp_code)
-            except Employee.DoesNotExist:
+        if emp_codes is not None:
+            project = instance.phase.project
+
+            employees = Employee.objects.filter(
+                employee_id__in=emp_codes,
+                project_teams=project
+            )
+
+            if employees.count() != len(emp_codes):
                 raise serializers.ValidationError({
-                    "employee_id": "Invalid Employee ID"
+                    "employee_ids": "Employees must belong to the project team."
                 })
+
+            instance.assigned_to.set(employees)
 
         return super().update(instance, validated_data)
 
 
-class ProjectPhaseSerializer(serializers.ModelSerializer):
 
+class ProjectPhaseSerializer(serializers.ModelSerializer):
     tasks = PhaseTaskSerializer(many=True, read_only=True)
 
-    # Accept PRJ-2026-0010
+    # WRITE → PRJ-2026-0001
     project_id = serializers.SlugRelatedField(
         queryset=Project.objects.all(),
         slug_field="project_id",
@@ -296,14 +343,14 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
-    # Accept multiple EMP codes
+    # WRITE → EMP001, EMP002
     employee_ids = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
         required=False
     )
 
-    # Response fields
+    # READ
     project = serializers.CharField(source="project.project_id", read_only=True)
     project_name = serializers.CharField(source="project.project_name", read_only=True)
     assigned_to = EmployeeBasicSerializer(many=True, read_only=True)
@@ -312,6 +359,7 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
         model = ProjectPhase
         fields = [
             "id",
+            "phase_id",
             "project",
             "project_id",
             "project_name",
@@ -326,15 +374,19 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         emp_codes = validated_data.pop("employee_ids", [])
-
         phase = super().create(validated_data)
 
         if emp_codes:
-            employees = Employee.objects.filter(employee_id__in=emp_codes)
+            project = phase.project
+
+            employees = Employee.objects.filter(
+                employee_id__in=emp_codes,
+                project_teams=project   # 🔥 restriction
+            )
 
             if employees.count() != len(emp_codes):
                 raise serializers.ValidationError({
-                    "employee_ids": "One or more Employee IDs are invalid"
+                    "employee_ids": "Employees must belong to the project team."
                 })
 
             phase.assigned_to.set(employees)
@@ -345,11 +397,16 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
         emp_codes = validated_data.pop("employee_ids", None)
 
         if emp_codes is not None:
-            employees = Employee.objects.filter(employee_id__in=emp_codes)
+            project = instance.project
+
+            employees = Employee.objects.filter(
+                employee_id__in=emp_codes,
+                project_teams=project
+            )
 
             if employees.count() != len(emp_codes):
                 raise serializers.ValidationError({
-                    "employee_ids": "One or more Employee IDs are invalid"
+                    "employee_ids": "Employees must belong to the project team."
                 })
 
             instance.assigned_to.set(employees)

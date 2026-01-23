@@ -3,6 +3,7 @@ from employees.models import Employee
 from django.utils import timezone
 
 
+
 # =====================================================
 # Project Model (WITH BUDGET)
 # =====================================================
@@ -120,6 +121,9 @@ class Project(models.Model):
         return f"{self.project_name} ({self.project_id})"
 
 
+from django.db import models, transaction
+from django.utils import timezone
+
 class ProjectPhase(models.Model):
 
     PHASE_CHOICES = [
@@ -129,6 +133,12 @@ class ProjectPhase(models.Model):
         ("testing", "Testing"),
         ("deployment", "Deployment"),
     ]
+
+    phase_id = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True
+    )
 
     project = models.ForeignKey(
         Project,
@@ -142,22 +152,61 @@ class ProjectPhase(models.Model):
     )
 
     description = models.TextField(blank=True)
+
     assigned_to = models.ManyToManyField(
-    Employee,
-    related_name="assigned_phases",
-    blank=True
-)
+        Employee,
+        related_name="assigned_phases",
+        blank=True
+    )
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("project", "phase_type")   # One phase per project
+        unique_together = ("project", "phase_type")
+
+    def save(self, *args, **kwargs):
+        if not self.phase_id:
+            year = timezone.now().year
+
+            with transaction.atomic():
+                last_phase = (
+                    ProjectPhase.objects
+                    .select_for_update()
+                    .filter(phase_id__startswith=f"PHASE-{year}")
+                    .order_by("-id")
+                    .first()
+                )
+
+                if last_phase:
+                    last_number = int(last_phase.phase_id.split("-")[-1])
+                    new_number = last_number + 1
+                else:
+                    new_number = 1
+
+                self.phase_id = f"PHASE-{year}-{new_number:04d}"
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.project.project_name} - {self.get_phase_type_display()}"
+        return f"{self.project.project_id} - {self.phase_id}"
+
+
 
 class PhaseTask(models.Model):
+
+    task_id = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True
+    )
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
     phase = models.ForeignKey(
         ProjectPhase,
@@ -167,7 +216,12 @@ class PhaseTask(models.Model):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    assigned_to = models.ForeignKey(Employee,on_delete=models.SET_NULL,null=True,blank=True)
+
+    assigned_to = models.ManyToManyField(
+        Employee,
+        related_name="assigned_tasks",
+        blank=True
+    )
 
     status = models.CharField(
         max_length=20,
@@ -182,6 +236,27 @@ class PhaseTask(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
-    def __str__(self):
-        return self.title
+    def save(self, *args, **kwargs):
+        # 🔥 Auto-set project from phase
+        if self.phase and not self.project:
+            self.project = self.phase.project
 
+        # 🔥 Auto-generate task_id
+        if not self.task_id:
+            year = timezone.now().year
+            last_task = PhaseTask.objects.filter(
+                task_id__startswith=f"TASK-{year}"
+            ).order_by("-id").first()
+
+            if last_task:
+                last_number = int(last_task.task_id.split("-")[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            self.task_id = f"TASK-{year}-{new_number:04d}"
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.title} ({self.task_id})"
