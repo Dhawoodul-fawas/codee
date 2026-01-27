@@ -52,12 +52,17 @@ class ProjectSerializer(serializers.ModelSerializer):
     write_only=True
 )
 
+     # ✅ READ → team members info
     team_members = EmployeeBasicSerializer(many=True, read_only=True)
-    team_member_ids = serializers.PrimaryKeyRelatedField(
+
+    # ✅ WRITE → accept ["EMP001", "EMP019", "EMP023"]
+    team_member_ids = serializers.SlugRelatedField(
         queryset=Employee.objects.all(),
+        slug_field="employee_id",
         many=True,
         write_only=True,
-        required=False
+        required=False,
+        source="team_members" 
     )
 
     spent_amount = serializers.DecimalField(
@@ -145,37 +150,33 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     # CREATE → spent_amount ALWAYS ZERO
     def create(self, validated_data):
-        team_ids = validated_data.pop('team_member_ids', [])
+        team_members = validated_data.pop('team_members', [])
 
         project = Project.objects.create(
             **validated_data,
             spent_amount=Decimal('0.00')
         )
 
-        project.team_members.set(team_ids)
+        if team_members:
+            project.team_members.set(team_members)
+
         return project
-
-
 
     # UPDATE → NO spent_amount here
     def update(self, instance, validated_data):
-        team_ids = validated_data.pop('team_member_ids', None)
+        team_members = validated_data.pop('team_members', None)
 
-    # 🔹 Update all fields including spent_amount
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-    # 🔹 Auto-calculate remaining_amount (NO model change)
+        # auto-calc remaining
         instance.remaining_amount = instance.total_budget - instance.spent_amount
-
         instance.save()
 
-        if team_ids is not None:
-            instance.team_members.set(team_ids)
+        if team_members is not None:
+            instance.team_members.set(team_members)
 
         return instance
-
-
 
     # ✅ Validation stays (already good)
     def validate(self, data):
@@ -259,10 +260,9 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
 
 class PhaseTaskSerializer(serializers.ModelSerializer):
-    # READ
     assigned_to = EmployeeBasicSerializer(many=True, read_only=True)
+    phase_id = serializers.CharField(write_only=True)
 
-    # WRITE → accept EMP001, EMP002
     employee_ids = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
@@ -275,7 +275,7 @@ class PhaseTaskSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "task_id",
-            "phase",
+            "phase_id",
             "title",
             "description",
             "status",
@@ -285,20 +285,24 @@ class PhaseTaskSerializer(serializers.ModelSerializer):
             "employee_ids",
         ]
 
-    def _get_project(self, validated_data):
-        phase = validated_data.get("phase") or self.instance.phase
-        return phase.project
+    def validate(self, attrs):
+        phase_id = attrs.pop("phase_id", None)
 
-    def create(self, validated_data):
-        emp_codes = validated_data.pop("employee_ids", [])
-        task = super().create(validated_data)
+        try:
+            phase = ProjectPhase.objects.get(phase_id=phase_id)
+        except ProjectPhase.DoesNotExist:
+            raise serializers.ValidationError({
+                "phase_id": "Invalid phase_id."
+            })
 
+        attrs["phase"] = phase  # 🔥 inject real FK
+
+        # employee validation (same as before)
+        emp_codes = attrs.get("employee_ids", [])
         if emp_codes:
-            project = self._get_project(validated_data)
-
             employees = Employee.objects.filter(
                 employee_id__in=emp_codes,
-                project_teams=project   # 🔥 restriction
+                project_teams=phase.project
             )
 
             if employees.count() != len(emp_codes):
@@ -306,29 +310,32 @@ class PhaseTaskSerializer(serializers.ModelSerializer):
                     "employee_ids": "Employees must belong to the project team."
                 })
 
+            attrs["_employees"] = employees
+
+        return attrs
+
+
+    def create(self, validated_data):
+        employees = validated_data.pop("_employees", [])
+        validated_data.pop("employee_ids", None)
+
+        task = PhaseTask.objects.create(**validated_data)
+
+        if employees:
             task.assigned_to.set(employees)
 
         return task
 
     def update(self, instance, validated_data):
-        emp_codes = validated_data.pop("employee_ids", None)
+        employees = validated_data.pop("_employees", None)
+        validated_data.pop("employee_ids", None)
 
-        if emp_codes is not None:
-            project = instance.phase.project
+        instance = super().update(instance, validated_data)
 
-            employees = Employee.objects.filter(
-                employee_id__in=emp_codes,
-                project_teams=project
-            )
-
-            if employees.count() != len(emp_codes):
-                raise serializers.ValidationError({
-                    "employee_ids": "Employees must belong to the project team."
-                })
-
+        if employees is not None:
             instance.assigned_to.set(employees)
 
-        return super().update(instance, validated_data)
+        return instance
 
 
 
@@ -371,17 +378,23 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
             "employee_ids",
             "tasks",
         ]
+        validators = []
 
     def create(self, validated_data):
         emp_codes = validated_data.pop("employee_ids", [])
-        phase = super().create(validated_data)
+        project = validated_data["project"]
+        phase_type = validated_data["phase_type"]
+
+        phase, created = ProjectPhase.objects.update_or_create(
+            project=project,
+            phase_type=phase_type,
+            defaults=validated_data
+        )
 
         if emp_codes:
-            project = phase.project
-
             employees = Employee.objects.filter(
                 employee_id__in=emp_codes,
-                project_teams=project   # 🔥 restriction
+                project_teams=project
             )
 
             if employees.count() != len(emp_codes):
@@ -392,6 +405,7 @@ class ProjectPhaseSerializer(serializers.ModelSerializer):
             phase.assigned_to.set(employees)
 
         return phase
+
 
     def update(self, instance, validated_data):
         emp_codes = validated_data.pop("employee_ids", None)

@@ -128,10 +128,14 @@ class ProjectPhaseViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        project_id = self.kwargs.get("project_id")
-        return ProjectPhase.objects.filter(
-            project__project_id=project_id
-        )
+        project_id = self.request.query_params.get("project_id")
+
+        if project_id:
+            return ProjectPhase.objects.filter(
+                project__project_id=project_id
+            )
+        return ProjectPhase.objects.all()
+        
 
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(
@@ -158,16 +162,7 @@ class ProjectPhaseViewSet(viewsets.ModelViewSet):
             message="Phase added successfully",
             data=serializer.data,
             status_code=status.HTTP_201_CREATED
-    )
-
-
-        return api_response(
-            success=True,
-            message="Phase added successfully",
-            data=serializer.data,
-            status_code=status.HTTP_201_CREATED
         )
-
 
 
 class PhaseTaskViewSet(viewsets.ModelViewSet):
@@ -185,9 +180,7 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
         if phase_id:
             queryset = queryset.filter(phase__phase_id=phase_id)
 
-
         return queryset
-
 
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(
@@ -215,6 +208,7 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
             data=serializer.data,
             status_code=status.HTTP_201_CREATED
         )
+
 
 
 class ProjectFullDetailAPIView(APIView):

@@ -1,6 +1,7 @@
 from django.db import models
 from employees.models import Employee
 from django.utils import timezone
+from django.db import transaction
 
 
 
@@ -120,10 +121,6 @@ class Project(models.Model):
     def __str__(self):
         return f"{self.project_name} ({self.project_id})"
 
-
-from django.db import models, transaction
-from django.utils import timezone
-
 class ProjectPhase(models.Model):
 
     PHASE_CHOICES = [
@@ -134,10 +131,18 @@ class ProjectPhase(models.Model):
         ("deployment", "Deployment"),
     ]
 
+    PHASE_CODES = {
+        "planning": "PLN",
+        "design": "DSN",
+        "development": "DEV",
+        "testing": "TST",
+        "deployment": "DPL",
+    }
+
     phase_id = models.CharField(
-        max_length=20,
+        max_length=50,
         unique=True,
-        blank=True
+        editable=False   # 🔒 system-generated only
     )
 
     project = models.ForeignKey(
@@ -163,34 +168,22 @@ class ProjectPhase(models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("project", "phase_type")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "phase_type"],
+                name="unique_phase_per_project"
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if not self.phase_id:
-            year = timezone.now().year
-
-            with transaction.atomic():
-                last_phase = (
-                    ProjectPhase.objects
-                    .select_for_update()
-                    .filter(phase_id__startswith=f"PHASE-{year}")
-                    .order_by("-id")
-                    .first()
-                )
-
-                if last_phase:
-                    last_number = int(last_phase.phase_id.split("-")[-1])
-                    new_number = last_number + 1
-                else:
-                    new_number = 1
-
-                self.phase_id = f"PHASE-{year}-{new_number:04d}"
+            phase_code = self.PHASE_CODES[self.phase_type]
+            self.phase_id = f"{self.project.project_id}-{phase_code}"
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.project.project_id} - {self.phase_id}"
-
+        return self.phase_id
 
 
 class PhaseTask(models.Model):
@@ -237,24 +230,28 @@ class PhaseTask(models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        # 🔥 Auto-set project from phase
+        # Auto-set project
         if self.phase and not self.project:
             self.project = self.phase.project
 
-        # 🔥 Auto-generate task_id
+        # Auto-generate task_id (transaction-safe)
         if not self.task_id:
-            year = timezone.now().year
-            last_task = PhaseTask.objects.filter(
-                task_id__startswith=f"TASK-{year}"
-            ).order_by("-id").first()
+            with transaction.atomic():
+                year = timezone.now().year
+                last_task = (
+                    PhaseTask.objects
+                    .select_for_update()
+                    .filter(task_id__startswith=f"TASK-{year}")
+                    .order_by("-id")
+                    .first()
+                )
 
-            if last_task:
-                last_number = int(last_task.task_id.split("-")[-1])
-                new_number = last_number + 1
-            else:
-                new_number = 1
+                last_number = (
+                    int(last_task.task_id.split("-")[-1])
+                    if last_task else 0
+                )
 
-            self.task_id = f"TASK-{year}-{new_number:04d}"
+                self.task_id = f"TASK-{year}-{last_number + 1:04d}"
 
         super().save(*args, **kwargs)
 
