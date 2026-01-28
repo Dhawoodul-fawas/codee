@@ -122,6 +122,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 # STAFF ONLY LIST
 class EmployeeOnlyListView(generics.ListAPIView):
     serializer_class = EmployeeListSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="staff").order_by('-created_at')
@@ -140,6 +141,7 @@ class EmployeeOnlyListView(generics.ListAPIView):
 # ✅ INTERN ONLY FULL LIST
 class InternOnlyListView(generics.ListAPIView):
     serializer_class = EmployeeListSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="intern").order_by('-created_at')
@@ -158,6 +160,7 @@ class InternOnlyListView(generics.ListAPIView):
 # ✅ STAFF BASIC LIST
 class StaffListView(generics.ListAPIView):
     serializer_class = EmployeeBasicListSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="staff").order_by('-created_at')
@@ -176,6 +179,7 @@ class StaffListView(generics.ListAPIView):
 # ✅ INTERN BASIC LIST
 class InternListView(generics.ListAPIView):
     serializer_class = EmployeeBasicListSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Employee.objects.filter(employment_type="intern").order_by('-created_at')
@@ -191,11 +195,11 @@ class InternListView(generics.ListAPIView):
         )
 
 class EmployeeProjectCardView(APIView):
+    permission_classes = [AllowAny]
 
     def get(self, request, employee_id):
         employee = get_object_or_404(Employee, employee_id=employee_id)
 
-        # All projects where this employee has tasks
         projects = Project.objects.filter(
             phases__tasks__assigned_to=employee
         ).distinct()
@@ -215,13 +219,16 @@ class EmployeeProjectCardView(APIView):
             elif not tasks.exclude(status="completed").exists():
                 completed += 1
 
-        data = {
-            "assigned": assigned,
-            "completed": completed,
-            "pending": pending,
-        }
-
-        return Response(data)    
+        return api_response(
+            success=True,
+            message="Employee project card fetched successfully",
+            data={
+                "assigned": assigned,
+                "completed": completed,
+                "pending": pending,
+            }
+        )
+ 
 
 class EmployeeFullDetailAPIView(APIView):
     permission_classes = [AllowAny]
@@ -274,4 +281,17 @@ class ManagerListAPIView(ListAPIView):
             employment_type="staff",
             is_manager=True,
             status="active"
-        ).order_by("name")        
+        ).order_by("name")
+
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_queryset(),
+            many=True
+        )
+
+        return api_response(
+            success=True,
+            message="Manager list fetched successfully",
+            data=serializer.data
+        )
+    

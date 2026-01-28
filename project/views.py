@@ -150,7 +150,11 @@ class ProjectTypeFilterView(generics.ListAPIView):
 class ProjectPhaseViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectPhaseSerializer
     permission_classes = [AllowAny]
+
     queryset = ProjectPhase.objects.all()
+
+    lookup_field = "phase_id"
+    lookup_url_kwarg = "phase_id"
 
     # -----------------------------
     # LIST BY PROJECT (PATH PARAM)
@@ -159,7 +163,6 @@ class ProjectPhaseViewSet(viewsets.ModelViewSet):
         project_id = kwargs.get("project_id")
 
         if project_id:
-            # ensure project exists
             get_object_or_404(Project, project_id=project_id)
 
             queryset = ProjectPhase.objects.filter(
@@ -197,6 +200,37 @@ class ProjectPhaseViewSet(viewsets.ModelViewSet):
             data=serializer.data,
             status_code=status.HTTP_201_CREATED
         )
+
+    # -----------------------------
+    # UPDATE ✅
+    # -----------------------------
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_object(),
+            data=request.data,
+            partial=True,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return api_response(
+            success=True,
+            message="Phase updated successfully",
+            data=serializer.data
+        )
+
+    # -----------------------------
+    # DELETE ✅
+    # -----------------------------
+    def destroy(self, request, *args, **kwargs):
+        self.get_object().delete()
+        return api_response(
+            success=True,
+            message="Phase deleted successfully",
+            data=None
+        )
+
 # =====================================================
 # PHASE TASK VIEWSET
 # =====================================================
@@ -205,33 +239,38 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
     serializer_class = PhaseTaskSerializer
     permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        phase_id = self.request.query_params.get("phase")
+    queryset = PhaseTask.objects.select_related(
+        "phase",
+        "phase__project"
+    )
 
-        queryset = PhaseTask.objects.select_related(
-            "phase",
-            "phase__project"
-        )
-
-        if phase_id:
-            queryset = queryset.filter(
-                phase__phase_id=phase_id
-            )
-
-        return queryset
+    lookup_field = "task_id"
+    lookup_url_kwarg = "task_id"
 
     # -----------------------------
-    # LIST
+    # LIST TASKS BY PHASE (PATH)
     # -----------------------------
     def list(self, request, *args, **kwargs):
+        phase_id = kwargs.get("phase_id")
+
+        if phase_id:
+            get_object_or_404(ProjectPhase, phase_id=phase_id)
+
+            queryset = PhaseTask.objects.filter(
+                phase__phase_id=phase_id
+            ).order_by("start_date")
+        else:
+            queryset = PhaseTask.objects.all().order_by("start_date")
+
         serializer = self.get_serializer(
-            self.get_queryset(),
+            queryset,
             many=True,
             context={"request": request}
         )
+
         return api_response(
             success=True,
-            message="Tasks fetched successfully",
+            message="Phase tasks fetched successfully",
             data=serializer.data
         )
 
@@ -253,6 +292,35 @@ class PhaseTaskViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_201_CREATED
         )
 
+    # -----------------------------
+    # UPDATE ✅ (THIS WAS MISSING)
+    # -----------------------------
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            self.get_object(),
+            data=request.data,
+            partial=True,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return api_response(
+            success=True,
+            message="Task updated successfully",
+            data=serializer.data
+        )
+
+    # -----------------------------
+    # DELETE ✅ (THIS WAS MISSING)
+    # -----------------------------
+    def destroy(self, request, *args, **kwargs):
+        self.get_object().delete()
+        return api_response(
+            success=True,
+            message="Task deleted successfully",
+            data=None
+        )
 
 # =====================================================
 # PROJECT FULL DETAIL API

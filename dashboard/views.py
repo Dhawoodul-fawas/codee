@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from datetime import date
-
+from rest_framework.permissions import AllowAny
+from dashboard.utils import api_response
 from employees.models import Employee
 from project.models import PhaseTask, Project
 from apk.models import Attendance
@@ -28,6 +29,8 @@ def get_project_status(project):
 # TOP DASHBOARD CARDS
 # ---------------------------------------------
 class DashboardSummaryAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
 
         active_employees = Employee.objects.filter(
@@ -42,10 +45,7 @@ class DashboardSummaryAPIView(APIView):
 
         project_count = Project.objects.count()
 
-        total_staff = Employee.objects.filter(
-            employee_id__startswith="EMP",
-            status="active"
-        ).count()
+        total_staff = active_employees
 
         present_today = Attendance.objects.filter(
             date=date.today(),
@@ -56,19 +56,24 @@ class DashboardSummaryAPIView(APIView):
             (present_today / total_staff) * 100 if total_staff else 0
         )
 
-        return Response({
-            "success": True,
-            "active_employees": active_employees,
-            "active_interns": active_interns,
-            "project_count": project_count,
-            "attendance_percent": round(attendance_percent, 1)
-        })
+        return api_response(
+            success=True,
+            message="Dashboard summary fetched successfully",
+            data={
+                "active_employees": active_employees,
+                "active_interns": active_interns,
+                "project_count": project_count,
+                "attendance_percent": round(attendance_percent, 1)
+            }
+        )
 
 
 # ---------------------------------------------
 # ONGOING PROJECT LIST
 # ---------------------------------------------
 class OngoingProjectsAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
 
         projects = Project.objects.prefetch_related(
@@ -81,16 +86,10 @@ class OngoingProjectsAPIView(APIView):
             if get_project_status(p) != "ongoing":
                 continue
 
-            total_tasks = PhaseTask.objects.filter(
-                phase__project=p
-            ).count()
+            tasks = PhaseTask.objects.filter(phase__project=p)
 
-            completed_tasks = PhaseTask.objects.filter(
-                phase__project=p,
-                status="completed"
-            ).count()
-
-
+            total_tasks = tasks.count()
+            completed_tasks = tasks.filter(status="completed").count()
 
             progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
 
@@ -108,13 +107,20 @@ class OngoingProjectsAPIView(APIView):
                 "members": members
             })
 
-        return Response({"success": True, "data": data[:10]})
+        return api_response(
+            success=True,
+            message="Ongoing projects fetched successfully",
+            data=data[:10]
+        )
+
 
 
 # ---------------------------------------------
 # BAR GRAPH (Monthly Attendance)
 # ---------------------------------------------
 class PerformanceGraphAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
 
         qs = Attendance.objects.filter(
@@ -125,42 +131,43 @@ class PerformanceGraphAPIView(APIView):
             total=Count("id")
         ).order_by("month")
 
-        months = []
-        values = []
+        months = [row["month"].strftime("%b") for row in qs]
+        values = [row["total"] for row in qs]
 
-        for row in qs:
-            months.append(row["month"].strftime("%b"))
-            values.append(row["total"])
+        return api_response(
+            success=True,
+            message="Attendance performance graph data fetched",
+            data={
+                "months": months,
+                "values": values
+            }
+        )
 
-        return Response({
-            "success": True,
-            "months": months,
-            "values": values
-        })
 
 
 # ---------------------------------------------
 # DONUT CHART (Project Status)
 # ---------------------------------------------
 class ProjectStatusAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
 
-        completed = 0
-        ongoing = 0
-        pending = 0
+        completed = ongoing = pending = 0
 
         projects = Project.objects.prefetch_related("phases__tasks")
         total_projects = projects.count()
 
         if total_projects == 0:
-            return Response({
-                "success": True,
-                "data": {
+            return api_response(
+                success=True,
+                message="Project status fetched successfully",
+                data={
                     "completed": 0,
                     "ongoing": 0,
                     "pending": 0
                 }
-            })
+            )
 
         for project in projects:
             status = get_project_status(project)
@@ -172,11 +179,12 @@ class ProjectStatusAPIView(APIView):
             else:
                 pending += 1
 
-        return Response({
-            "success": True,
-            "data": {
+        return api_response(
+            success=True,
+            message="Project status fetched successfully",
+            data={
                 "completed": round((completed / total_projects) * 100, 2),
                 "ongoing": round((ongoing / total_projects) * 100, 2),
                 "pending": round((pending / total_projects) * 100, 2)
             }
-        })
+        )

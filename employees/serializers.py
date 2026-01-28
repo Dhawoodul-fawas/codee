@@ -91,6 +91,15 @@ class EmployeeListSerializer(serializers.ModelSerializer):
 # =====================================================
 class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    reporting_manager = serializers.SlugRelatedField(
+        queryset=Employee.objects.filter(
+            employment_type="staff",
+            is_manager=True
+        ),
+        slug_field="employee_id",
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = Employee

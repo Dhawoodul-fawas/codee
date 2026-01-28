@@ -65,10 +65,14 @@ class RegisterListView(ListAPIView):
     permission_classes = [AllowAny]
 
     def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
+        serializer = self.get_serializer(
+            self.get_queryset(),
+            many=True
+        )
 
         return api_response(
             success=True,
             message="User list fetched successfully",
-            data=response.data
+            data=serializer.data
         )
+

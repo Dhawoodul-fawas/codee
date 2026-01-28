@@ -16,7 +16,7 @@ from .views import (
 # -----------------------------
 project_create = ProjectViewSet.as_view({"post": "create"})
 project_list = ProjectViewSet.as_view({"get": "list"})
-project_edit = ProjectViewSet.as_view({"patch": "partial_update"})
+project_edit = ProjectViewSet.as_view({"patch": "partial_update","put": "update",})
 project_delete = ProjectViewSet.as_view({"delete": "destroy"})
 
 # -----------------------------
@@ -24,7 +24,7 @@ project_delete = ProjectViewSet.as_view({"delete": "destroy"})
 # -----------------------------
 phase_create = ProjectPhaseViewSet.as_view({"post": "create"})
 phase_list = ProjectPhaseViewSet.as_view({"get": "list"})
-phase_edit = ProjectPhaseViewSet.as_view({"patch": "partial_update",})
+phase_edit = ProjectPhaseViewSet.as_view({"patch": "partial_update","put": "update",})
 phase_delete = ProjectPhaseViewSet.as_view({"delete": "destroy",})
 
 # -----------------------------
@@ -32,7 +32,7 @@ phase_delete = ProjectPhaseViewSet.as_view({"delete": "destroy",})
 # -----------------------------
 task_create = PhaseTaskViewSet.as_view({"post": "create"})
 task_list = PhaseTaskViewSet.as_view({"get": "list"})
-task_edit = PhaseTaskViewSet.as_view({"patch": "partial_update",})
+task_edit = PhaseTaskViewSet.as_view({"patch": "partial_update","put": "update",})
 task_delete = PhaseTaskViewSet.as_view({"delete": "destroy",})
 
 
@@ -70,8 +70,9 @@ urlpatterns = [
     # -----------------------------
     path('tasks/create/', task_create, name='task-create'),
     path('tasks/list/', task_list, name='task-list'),
-    path('tasks/edit/<int:pk>/', task_edit, name='task-edit'),
-    path('tasks/delete/<int:pk>/', task_delete, name='task-delete'),
+    path('tasks/edit/<str:task_id>/', task_edit, name='task-edit'),
+    path('tasks/delete/<str:task_id>/', task_delete, name='task-delete'),
+    path("projects/phases/<str:phase_id>/tasks/",PhaseTaskViewSet.as_view({"get": "list"}),name="phase-tasks")
 
     
 ]
