@@ -63,6 +63,7 @@ urlpatterns = [
     path('phases/list/', phase_list, name='phase-list'),
     path('phases/edit/<str:project_id>/',phase_edit,name='phase-edit'),
     path('phases/delete/<str:project_id>/',phase_delete,name='phase-delete'),
+    path("projects/phases/<str:project_id>/",ProjectPhaseViewSet.as_view({"get": "list"}),),
 
     # -----------------------------
     # Phase Tasks

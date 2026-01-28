@@ -18,8 +18,11 @@ class Project(models.Model):
 
     TYPE_CHOICES = [
         ('web', 'Web'),
-        ('app', 'App'),
+        ('app', 'Mobile App'),
         ('webapp', 'Web App'),
+        ('desktop', 'Desktop App'),
+        ('api', 'API'),
+        ('software', 'Software'),
     ]
 
     project_id = models.CharField(

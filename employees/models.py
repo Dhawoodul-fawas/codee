@@ -11,6 +11,11 @@ class Employee(models.Model):
         ('uiux', 'UI/UX'),
         ('hr', 'HR'),
         ('flutter', 'Flutter'),
+        ('software', 'Software Development'),
+        ('tester', 'Software Testing'),
+        ('data_analytics', 'Data Analytics'),
+        ('devops', 'DevOps'),
+        ('cybersecurity', 'Cyber Security'),
     ]
 
     POSITION_CHOICES = [
