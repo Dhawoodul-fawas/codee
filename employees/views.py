@@ -194,41 +194,6 @@ class InternListView(generics.ListAPIView):
             data=serializer.data
         )
 
-class EmployeeProjectCardView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, employee_id):
-        employee = get_object_or_404(Employee, employee_id=employee_id)
-
-        projects = Project.objects.filter(
-            phases__tasks__assigned_to=employee
-        ).distinct()
-
-        assigned = projects.count()
-        completed = 0
-        pending = 0
-
-        for project in projects:
-            tasks = PhaseTask.objects.filter(
-                phase__project=project,
-                assigned_to=employee
-            )
-
-            if tasks.filter(status="pending").exists():
-                pending += 1
-            elif not tasks.exclude(status="completed").exists():
-                completed += 1
-
-        return api_response(
-            success=True,
-            message="Employee project card fetched successfully",
-            data={
-                "assigned": assigned,
-                "completed": completed,
-                "pending": pending,
-            }
-        )
- 
 
 class EmployeeFullDetailAPIView(APIView):
     permission_classes = [AllowAny]
@@ -241,23 +206,29 @@ class EmployeeFullDetailAPIView(APIView):
             context={"request": request}
         )
 
-        # Get all assigned projects
-        projects = Project.objects.filter(team_members=employee).prefetch_related("phases")
+        # ✅ PROJECT ONLY (no phases, no tasks)
+        projects = Project.objects.filter(team_members=employee)
 
         assigned = projects.count()
-        completed = 0
-        pending = 0
+        completed = projects.filter(status="completed").count()
+        pending = projects.exclude(status="completed").count()
 
-        # Use same logic as serializer
-        for p in projects:
-            tasks = p.phases.all().values_list("tasks__status", flat=True)
-
-            if not tasks:
-                pending += 1
-            elif all(status == "completed" for status in tasks):
-                completed += 1
-            else:
-                pending += 1
+        project_list = [
+            {
+                "project_id": project.project_id,
+                "project_name": project.project_name,
+                "status": project.status,
+                "priority": project.priority,
+                "start_date": project.start_date,
+                "end_date": project.end_date,
+                "project_logo": (
+                    request.build_absolute_uri(project.project_logo.url)
+                    if project.project_logo
+                    else None
+                ),
+            }
+            for project in projects
+        ]
 
         return api_response(
             True,
@@ -267,8 +238,9 @@ class EmployeeFullDetailAPIView(APIView):
                 "project_cards": {
                     "assigned": assigned,
                     "completed": completed,
-                    "pending": pending
-                }
+                    "pending": pending,
+                },
+                "projects": project_list
             }
         )
 

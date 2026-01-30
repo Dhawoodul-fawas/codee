@@ -16,6 +16,7 @@ class Employee(models.Model):
         ('data_analytics', 'Data Analytics'),
         ('devops', 'DevOps'),
         ('cybersecurity', 'Cyber Security'),
+        ('digital_marketing', 'Digital Marketing'),
     ]
 
     POSITION_CHOICES = [
@@ -25,8 +26,8 @@ class Employee(models.Model):
     ]
 
     EMPLOYMENT_TYPE_CHOICES = [
-    ('staff', 'Staff'),
-    ('intern', 'Intern'),
+        ('staff', 'Staff'),
+        ('intern', 'Intern'),
     ]
 
     STATUS_CHOICES = [
@@ -43,6 +44,8 @@ class Employee(models.Model):
     ID_PROOF_CHOICES = [
         ('aadhaar', 'Aadhaar Card'),
         ('license', 'Driving License'),
+        ('pan', 'PAN Card'),
+        ('passport', 'Passport'),
     ]
     SALARY_TYPE_CHOICES = [
         ('monthly', 'Monthly'),

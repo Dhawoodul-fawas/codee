@@ -98,6 +98,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'end_date',
 
             'priority',
+            'status', 
             'project_type',
 
             'project_manager',
@@ -225,6 +226,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'description',
 
             'priority',
+            'status',
             'project_type',
 
             'client_name',

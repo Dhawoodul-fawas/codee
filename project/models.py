@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from employees.models import Employee
 from django.utils import timezone
@@ -21,9 +22,16 @@ class Project(models.Model):
         ('app', 'Mobile App'),
         ('webapp', 'Web App'),
         ('desktop', 'Desktop App'),
-        ('api', 'API'),
         ('software', 'Software'),
+        ('marketing', 'Marketing'),
     ]
+
+    STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('in_progress', 'In Progress'),
+    ('completed', 'Completed'),
+    ]
+
 
     project_id = models.CharField(
         max_length=20,
@@ -47,6 +55,12 @@ class Project(models.Model):
         max_length=20,
         choices=PRIORITY_CHOICES,
         default='medium'
+    )
+
+    status = models.CharField(
+    max_length=20,
+    choices=STATUS_CHOICES,
+    default='pending'
     )
 
     project_manager = models.ForeignKey(
@@ -82,20 +96,21 @@ class Project(models.Model):
     total_budget = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=0.00
+        default=Decimal("0.00")
+
     )
 
     spent_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=0.00
+        default=Decimal("0.00")
     )
 
     remaining_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         editable=False,
-        default=0.00
+        default=Decimal("0.00")
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -122,7 +122,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 # =====================================================
 
 class ProjectTypeFilterView(generics.ListAPIView):
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectListSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
