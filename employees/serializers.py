@@ -266,8 +266,18 @@ class EmployeeAllListSerializer(serializers.ModelSerializer):
         if obj.employment_type != "staff" or not obj.offer_letter:
             return None
         request = self.context.get("request")
-        url = obj.offer_letter.url
-        return request.build_absolute_uri(url) if request else url
+        return request.build_absolute_uri(obj.offer_letter.url) if request else obj.offer_letter.url
+
+    # 🔥 REMOVE PROJECT DATA WHEN FLAG IS SET
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        if self.context.get("exclude_projects"):
+            data.pop("assigned_projects", None)
+            data.pop("completed_projects", None)
+            data.pop("pending_projects", None)
+
+        return data
 
     # -------- PROJECT STATUS --------
     def _project_status(self, project):
@@ -311,22 +321,6 @@ class EmployeeAllListSerializer(serializers.ModelSerializer):
             if self._project_status(p) != "completed"
         ]
 
-
-# =====================================================
-# BASIC & MANAGER SERIALIZERS
-# =====================================================
-class EmployeeBasicListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Employee
-        fields = [
-            'id',
-            'employee_id',
-            'name',
-            'department',
-            'joining_date',
-            'phone',
-            'email',
-        ]
 
 
 class ManagerListSerializer(serializers.ModelSerializer):
